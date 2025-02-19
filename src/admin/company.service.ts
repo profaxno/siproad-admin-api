@@ -88,10 +88,8 @@ export class CompanyService {
         const dto = new CompanyDto(entity.name, entity.id); // * map to dto
 
         // * replication data
-        const json = JSON.stringify(dto);
-        const messageToProducts = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.PRODUCTS_COMPANY_UPDATE, json);
-        const messageToOrders   = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.ORDERS_COMPANY_UPDATE, json);
-        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageToProducts, messageToOrders]);
+        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));
+        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
         this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
@@ -138,10 +136,8 @@ export class CompanyService {
         const dto = new CompanyDto(entity.name, entity.id); // * map to dto
 
         // * replication data
-        const json = JSON.stringify(dto);
-        const messageToProducts = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.PRODUCTS_COMPANY_UPDATE, json);
-        const messageToOrders   = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.ORDERS_COMPANY_UPDATE, json);
-        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageToProducts, messageToOrders]);
+        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));
+        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
         this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
@@ -244,10 +240,8 @@ export class CompanyService {
         // * replication data
         const entity = entityList[0];
         const dto = new CompanyDto(entity.name, entity.id); // * map to dto
-        const json = JSON.stringify(dto);
-        const messageToProducts = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.PRODUCTS_COMPANY_DELETE, json);
-        const messageToOrders   = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.ORDERS_COMPANY_DELETE, json);
-        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageToProducts, messageToOrders]);
+        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(dto));
+        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
         this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
