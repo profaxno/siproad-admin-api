@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsPositive, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class CompanyDto {
   

@@ -2,27 +2,26 @@ import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxno
 
 import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
 
-import { UserDto, AdminResponseDto } from './dto';
-import { UserService } from './user.service';
+import { PermissionDto, AdminResponseDto } from './dto';
+import { PermissionService } from './permission.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
 
-
 @Controller('siproad-admin')
-export class UserController {
+export class PermissionController {
 
-  private readonly logger = new Logger(UserController.name);
+  private readonly logger = new Logger(PermissionController.name);
 
   constructor(
-    private readonly userService: UserService
+    private readonly permissionService: PermissionService
   ) {}
 
-  @Post('/users/updateBatch')
+  @Post('/permissions/updateBatch')
   @HttpCode(HttpStatus.OK)
-  updateBatch(@Body() dtoList: UserDto[]): Promise<AdminResponseDto> {
+  updateBatch(@Body() dtoList: PermissionDto[]): Promise<AdminResponseDto> {
     this.logger.log(`>>> updateBatch: listSize=${dtoList.length}`);
     const start = performance.now();
 
-    return this.userService.updateBatch(dtoList)
+    return this.permissionService.updateBatch(dtoList)
     .then( (processSummaryDto: ProcessSummaryDto) => {
       const response = new AdminResponseDto(HttpStatus.OK, "executed", undefined, processSummaryDto);
       const end = performance.now();
@@ -36,14 +35,14 @@ export class UserController {
 
   }
 
-  @Patch('/users/update')
+  @Patch('/permissions/update')
   @HttpCode(HttpStatus.OK)
-  update(@Body() dto: UserDto): Promise<AdminResponseDto> {
+  update(@Body() dto: PermissionDto): Promise<AdminResponseDto> {
     this.logger.log(`>>> update: dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    return this.userService.update(dto)
-    .then( (dto: UserDto) => {
+    return this.permissionService.update(dto)
+    .then( (dto: PermissionDto) => {
       const response = new AdminResponseDto(HttpStatus.OK, 'executed', 1, [dto]);
       const end = performance.now();
       this.logger.log(`<<< update: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
@@ -52,7 +51,7 @@ export class UserController {
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
         return new AdminResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
-      
+
       if(error instanceof AlreadyExistException)
         return new AdminResponseDto(HttpStatus.BAD_REQUEST, error.message, 0, []);
 
@@ -61,13 +60,13 @@ export class UserController {
     })
   }
 
-  @Get('/users/:companyId')
-  find(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: SearchPaginationDto, @Body() inputDto: SearchInputDto): Promise<AdminResponseDto> {
-    this.logger.log(`>>> find: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
+  @Get('/permissions')
+  find(@Query() paginationDto: SearchPaginationDto, @Body() inputDto: SearchInputDto): Promise<AdminResponseDto> {
+    this.logger.log(`>>> find: paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
     const start = performance.now();
     
-    return this.userService.find(companyId, paginationDto, inputDto)
-    .then( (dtoList: UserDto[]) => {
+    return this.permissionService.find(paginationDto, inputDto)
+     .then( (dtoList: PermissionDto[]) => {
       const response = new AdminResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< find: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
@@ -82,13 +81,13 @@ export class UserController {
     })
   }
 
-  @Get('/users/:companyId/:value')
-  findOneByValue(@Param('companyId', ParseUUIDPipe) companyId: string, @Param('value') value: string): Promise<AdminResponseDto> {
-    this.logger.log(`>>> findOneByValue: companyId=${companyId}, value=${value}`);
+  @Get('/permissions/:value')
+  findOneByValue(@Param('value') value: string): Promise<AdminResponseDto> {
+    this.logger.log(`>>> findOneByValue: value=${value}`);
     const start = performance.now();
 
-    return this.userService.findOneByValue(companyId, value)
-    .then( (dtoList: UserDto[]) => {
+    return this.permissionService.findOneByValue(value)
+    .then( (dtoList: PermissionDto[]) => {
       const response = new AdminResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< findOneByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
@@ -104,12 +103,12 @@ export class UserController {
 
   }
 
-  @Delete('users/:id')
+  @Delete('permissions/:id')
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<AdminResponseDto> {
     this.logger.log(`>>> remove: id=${id}`);
     const start = performance.now();
 
-    return this.userService.remove(id)
+    return this.permissionService.remove(id)
     .then( (msg: string) => {
       const response = new AdminResponseDto(HttpStatus.OK, msg);
       const end = performance.now();
@@ -119,35 +118,13 @@ export class UserController {
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
         return new AdminResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
-      
+
       if(error instanceof IsBeingUsedException)
         return new AdminResponseDto(HttpStatus.BAD_REQUEST, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new AdminResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
-  }
-
-  @Post('/users/email/:email')
-  findOneByEmail(@Param('email') email: string): Promise<AdminResponseDto> {
-    this.logger.log(`>>> findOneByEmail: email=${email}`);
-    const start = performance.now();
-
-    return this.userService.findOneByEmail(email)
-    .then( (dtoList: UserDto[]) => {
-      const response = new AdminResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
-      const end = performance.now();
-      this.logger.log(`<<< findOneByEmail: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-      return response;
-    })
-    .catch( (error: Error) => {
-      if(error instanceof NotFoundException)
-        return new AdminResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
-
-      this.logger.error(error.stack);
-      return new AdminResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-    })
-
   }
   
 }

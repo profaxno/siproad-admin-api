@@ -22,5 +22,16 @@ Api central del sistema siproad que permite gestionar elementos, productos y ord
 
 ### Configuración de la base de datos (docker)
 * Instalar Docker desktop.
+  * Limitar memoria del wsl utilizado por docker
+  * Abrir archivo wsl ```notepad %USERPROFILE%\.wslconfig```
+  * Copiar dentro del archivo wslconfig el siguiente contenido:
+    ```
+    [wsl2]
+    memory=4GB   # Limita a 4GB de RAM
+    processors=4  # Usa solo 4 núcleos
+    swap=2GB      # Agrega 2GB de swap
+    ```
+  * Reiniciar wsl ```wsl --shutdown```
+* Abrir Docker desktop.
 * Descargar imagen mariadb.
 * Crear contenedor de base de datos y api ```docker-compose -p dev-siproad up -d```

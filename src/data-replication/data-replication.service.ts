@@ -103,20 +103,20 @@ export class DataReplicationService {
 
     }
 
-    if(messageDto.source == SourceEnum.API_PRODUCTS){
+    // if(messageDto.source == SourceEnum.API_PRODUCTS){
 
-      const command = new PublishCommand({
-        TopicArn: this.productsSnsTopicArn,
-        Message: JSON.stringify(messageDto)
-      })
+    //   const command = new PublishCommand({
+    //     TopicArn: this.productsSnsTopicArn,
+    //     Message: JSON.stringify(messageDto)
+    //   })
   
-      this.logger.log(`sendMessage: command=${JSON.stringify(command)}`);
-      return this.snsClient.send(command)
-      .then( (result: any) => {
-        return `message sent, messageId=${result.MessageId}`;
-      })
+    //   this.logger.log(`sendMessage: command=${JSON.stringify(command)}`);
+    //   return this.snsClient.send(command)
+    //   .then( (result: any) => {
+    //     return `message sent, messageId=${result.MessageId}`;
+    //   })
 
-    }
+    // }
 
     throw new Error(`source not implement, source=${messageDto.source}`);
 

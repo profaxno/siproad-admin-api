@@ -6,32 +6,33 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { UserStatusEnum } from './enum/user-status.enum';
-import { UserDto, UserRoleDto, UserPermissionDto, PermissionDto } from './dto';
-import { User, UserRole, Role, Company } from './entities';
+import { RoleDto, RolePermissionDto } from './dto/role.dto';
+import { Role } from './entities/role.entity';
 
+import { Company } from './entities/company.entity';
 import { CompanyService } from './company.service';
-
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
+import { RolePermission } from './entities/role-permission.entity';
+import { Permission } from './entities/permission.entity';
 
 @Injectable()
-export class UserService {
+export class RoleService {
 
-  private readonly logger = new Logger(UserService.name);
+  private readonly logger = new Logger(RoleService.name);
 
   private dbDefaultLimit = 1000;
 
   constructor(
     private readonly ConfigService: ConfigService,
 
-    @InjectRepository(User, 'adminConn')
-    private readonly userRepository: Repository<User>,
-
     @InjectRepository(Role, 'adminConn')
     private readonly roleRepository: Repository<Role>,
 
-    @InjectRepository(UserRole, 'adminConn')
-    private readonly userRoleRepository: Repository<UserRole>,
+    @InjectRepository(Permission, 'adminConn')
+    private readonly permissionRepository: Repository<Permission>,
+
+    @InjectRepository(RolePermission, 'adminConn')
+    private readonly rolePermissionRepository: Repository<RolePermission>,
 
     private readonly companyService: CompanyService
     
@@ -39,7 +40,7 @@ export class UserService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
-  async updateBatch(dtoList: UserDto[]): Promise<ProcessSummaryDto>{
+  async updateBatch(dtoList: RoleDto[]): Promise<ProcessSummaryDto>{
     this.logger.warn(`updateBatch: starting process... listSize=${dtoList.length}`);
     const start = performance.now();
     
@@ -64,7 +65,7 @@ export class UserService {
     return processSummaryDto;
   }
 
-  update(dto: UserDto): Promise<UserDto> {
+  update(dto: RoleDto): Promise<RoleDto> {
     if(!dto.id)
       return this.create(dto); // * create
     
@@ -85,15 +86,15 @@ export class UserService {
 
       const company = companyList[0];
 
-      // * find user
+      // * find role
       const inputDto: SearchInputDto = new SearchInputDto(dto.id);
         
       return this.findByParams({}, inputDto)
-      .then( (entityList: User[]) => {
+      .then( (entityList: Role[]) => {
 
         // * validate
         if(entityList.length == 0){
-          const msg = `user not found, id=${dto.id}`;
+          const msg = `role not found, id=${dto.id}`;
           this.logger.warn(`update: not executed (${msg})`);
           throw new NotFoundException(msg);
         }
@@ -103,16 +104,13 @@ export class UserService {
         // * update
         entity.company = company;
         entity.name = dto.name.toUpperCase();
-        entity.email = dto.email.toUpperCase();;
-        entity.password = dto.password;
-        entity.status = dto.status;
-        
-        return this.save(entity)
-        .then( (entity: User) => {
 
-          return this.updateUserRole(entity, dto.roleList)
-          .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
-          .then( (dto: UserDto) => {
+        return this.save(entity)
+        .then( (entity: Role) => {
+
+          return this.updateRolePermission(entity, dto.permissionList)
+          .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+          .then( (dto: RoleDto) => {
 
             const end = performance.now();
             this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
@@ -134,7 +132,7 @@ export class UserService {
 
   }
 
-  create(dto: UserDto): Promise<UserDto> {
+  create(dto: RoleDto): Promise<RoleDto> {
     this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
@@ -152,32 +150,30 @@ export class UserService {
 
       const company = companyList[0];
 
-      // * find user
-      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.email]);
+      // * find role
+      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
         
       return this.findByParams({}, inputDto, company.id)
-      .then( (entityList: User[]) => {
+      .then( (entityList: Role[]) => {
 
         // * validate
         if(entityList.length > 0){
-          const msg = `user already exists, email=${dto.email}`;
+          const msg = `role already exists, name=${dto.name}`;
           this.logger.warn(`create: not executed (${msg})`);
           throw new AlreadyExistException(msg);
         }
   
         // * create
-        let entity = new User();
+        let entity = new Role();
         entity.company = company;
         entity.name = dto.name.toUpperCase();
-        entity.email = dto.email.toUpperCase();;
-        entity.password = dto.password;
-  
+        
         return this.save(entity)
-        .then( (entity: User) => {
+        .then( (entity: Role) => {
 
-          return this.updateUserRole(entity, dto.roleList)
-          .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
-          .then( (dto: UserDto) => {
+          return this.updateRolePermission(entity, dto.permissionList)
+          .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+          .then( (dto: RoleDto) => {
 
             const end = performance.now();
             this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
@@ -199,15 +195,15 @@ export class UserService {
 
   }
 
-  find(companyId: string, paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<UserDto[]> {
+  find(companyId: string, paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<RoleDto[]> {
     const start = performance.now();
 
     return this.findByParams(paginationDto, inputDto, companyId)
-    .then( (entityList: User[]) => entityList.map( (entity: User) => this.generateUserWithRoleList(entity, entity.userRole) ) )// * map entities to DTOs
-    .then( (dtoList: UserDto[]) => {
+    .then( (entityList: Role[]) => entityList.map( (entity: Role) => this.generateRoleWithPermissionList(entity, entity.rolePermission) ) )// * map entities to DTOs
+    .then( (dtoList: RoleDto[]) => {
       
       if(dtoList.length == 0){
-        const msg = `users not found`;
+        const msg = `roles not found`;
         this.logger.warn(`find: ${msg}`);
         throw new NotFoundException(msg);
       }
@@ -226,17 +222,17 @@ export class UserService {
 
   }
 
-  findOneByValue(companyId: string, value: string): Promise<UserDto[]> {
+  findOneByValue(companyId: string, value: string): Promise<RoleDto[]> {
     const start = performance.now();
 
     const inputDto: SearchInputDto = new SearchInputDto(value);
     
     return this.findByParams({}, inputDto, companyId)
-    .then( (entityList: User[]) => entityList.map( (entity: User) => this.generateUserWithRoleList(entity, entity.userRole) ) )// * map entities to DTOs
-    .then( (dtoList: UserDto[]) => {
+    .then( (entityList: Role[]) => entityList.map( (entity: Role) => this.generateRoleWithPermissionList(entity, entity.rolePermission) ) )// * map entities to DTOs
+    .then( (dtoList: RoleDto[]) => {
       
       if(dtoList.length == 0){
-        const msg = `user not found, value=${value}`;
+        const msg = `role not found, value=${value}`;
         this.logger.warn(`findOneByValue: ${msg}`);
         throw new NotFoundException(msg);
       }
@@ -259,20 +255,20 @@ export class UserService {
     this.logger.log(`remove: starting process... id=${id}`);
     const start = performance.now();
 
-    // * find user
+    // * find role
     const inputDto: SearchInputDto = new SearchInputDto(id);
     
     return this.findByParams({}, inputDto)
-    .then( (entityList: User[]) => {
+    .then( (entityList: Role[]) => {
       
       if(entityList.length == 0){
-        const msg = `user not found, id=${id}`;
+        const msg = `role not found, id=${id}`;
         this.logger.warn(`remove: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
 
       // * delete
-      return this.userRepository.delete(id)
+      return this.roleRepository.delete(id)
       .then( () => {
         const end = performance.now();
         this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
@@ -285,7 +281,7 @@ export class UserService {
         throw error;
 
       if(error.errno == 1217) {
-        const msg = 'user is being used';
+        const msg = 'role is being used';
         this.logger.warn(`removeProduct: not executed (${msg})`, error);
         throw new IsBeingUsedException(msg);
       }
@@ -296,76 +292,49 @@ export class UserService {
 
   }
 
-  findOneByEmail(email: string): Promise<UserDto[]> {
+  private updateRolePermission(role: Role, rolePermissionDtoList: RolePermissionDto[] = []): Promise<RolePermission[]> {
+    this.logger.log(`updateRolePermission: starting process... role=${JSON.stringify(role)}, rolePermissionDtoList=${JSON.stringify(rolePermissionDtoList)}`);
     const start = performance.now();
 
-    return this.findByEmail(email)
-    .then( (entityList: User[]) => entityList.map( (entity: User) => this.generateUserWithRoleList(entity, entity.userRole) ) )// * map entities to DTOs
-    .then( (dtoList: UserDto[]) => {
-      
-      if(dtoList.length == 0){
-        const msg = `user not found, email=${email}`;
-        this.logger.warn(`findOneByEmail: ${msg}`);
-        throw new NotFoundException(msg);
-      }
-
-      const end = performance.now();
-      this.logger.log(`findOneByEmail: executed, runtime=${(end - start) / 1000} seconds`);
-      return dtoList;
-    })
-    .catch(error => {
-      if(error instanceof NotFoundException)
-        throw error;
-
-      this.logger.error(`findOneByEmail: error`, error);
-      throw error;
-    })
-
-  }
-
-  private updateUserRole(user: User, userRoleDtoList: UserRoleDto[] = []): Promise<UserRole[]> {
-    this.logger.log(`updateUserRole: starting process... user=${JSON.stringify(user)}, userRoleDtoList=${JSON.stringify(userRoleDtoList)}`);
-    const start = performance.now();
-
-    if(userRoleDtoList.length == 0){
-      this.logger.warn(`updateUserRole: not executed (user role list empty)`);
+    if(rolePermissionDtoList.length == 0){
+      this.logger.warn(`updateRolePermission: not executed (role role list empty)`);
       return Promise.resolve([]);
     }
 
     // * find roles by id
-    const roleIdList = userRoleDtoList.map( (item) => item.id );
+    const permissionIdList = rolePermissionDtoList.map( (item) => item.id );
 
-    return this.roleRepository.findBy({ // TODO: Posiblemente aca deberia utilizarse el servicio y no el repositorio
-      id: In(roleIdList),
+    return this.permissionRepository.findBy({ // TODO: Posiblemente aca deberia utilizarse el servicio y no el repositorio
+      id: In(permissionIdList),
     })
-    .then( (roleList: Role[]) => {
+    .then( (permissionList: Permission[]) => {
 
       // * validate
-      if(roleList.length !== roleIdList.length){
-        const roleIdNotFoundList: string[] = roleIdList.filter( (id) => !roleList.find( (role) => role.id == id) );
-        const msg = `roles not found, idList=${JSON.stringify(roleIdNotFoundList)}`;
+      if(permissionList.length !== permissionIdList.length){
+        const permissionIdNotFoundList: string[] = permissionIdList.filter( (id) => !permissionList.find( (permission) => permission.id == id) );
+        const msg = `permission not found, idList=${JSON.stringify(permissionIdNotFoundList)}`;
         throw new NotFoundException(msg); 
       }
 
-      // * create userRole
-      return this.userRoleRepository.findBy( { user } ) // * find userRole
-      .then( (userRoleList: UserRole[]) => this.userRoleRepository.remove(userRoleList)) // * remove userRoles
+      // * create rolePermission
+      return this.rolePermissionRepository.findBy( { role } ) // * find rolePermission
+      .then( (rolePermissionList: RolePermission[]) => this.rolePermissionRepository.remove(rolePermissionList)) // * remove rolePermissions
       .then( () => {
         
-        // * generate user role list
-        const userRoleList: UserRole[] = roleList.map( (role: Role) => {
-          const userRole = new UserRole();
-          userRole.user = user;
-          userRole.role = role;
-          return userRole;
+        // * generate role role list
+        const rolePermissionList: RolePermission[] = permissionList.map( (permission: Permission) => {
+          const rolePermission = new RolePermission();
+          rolePermission.role = role;
+          rolePermission.permission = permission;
+          return rolePermission;
         })
   
         // * bulk insert
-        return this.bulkInsertUserRoles(userRoleList)
-        .then( (userRoleList: UserRole[]) => {
+        return this.bulkInsertRolePermissions(rolePermissionList)
+        .then( (rolePermissionList: RolePermission[]) => {
           const end = performance.now();
-          this.logger.log(`updateUserRole: OK, runtime=${(end - start) / 1000} seconds`);
-          return userRoleList;
+          this.logger.log(`updateRolePermission: OK, runtime=${(end - start) / 1000} seconds`);
+          return rolePermissionList;
         })
 
       })
@@ -374,68 +343,68 @@ export class UserService {
 
   }
   
-  private bulkInsertUserRoles(userRoleList: UserRole[]): Promise<UserRole[]> {
+  private bulkInsertRolePermissions(rolePermissionList: RolePermission[]): Promise<RolePermission[]> {
     const start = performance.now();
-    this.logger.log(`bulkInsertUserRoles: starting process... listSize=${userRoleList.length}`);
+    this.logger.log(`bulkInsertRolePermissions: starting process... listSize=${rolePermissionList.length}`);
 
-    const newUserRoleList: UserRole[] = userRoleList.map( (value) => this.userRoleRepository.create(value));
+    const newRolePermissionList: RolePermission[] = rolePermissionList.map( (value) => this.rolePermissionRepository.create(value));
     
-    return this.userRoleRepository.manager.transaction( async(transactionalEntityManager) => {
+    return this.rolePermissionRepository.manager.transaction( async(transactionalEntityManager) => {
       
       return transactionalEntityManager
         .createQueryBuilder()
         .insert()
-        .into(UserRole)
-        .values(newUserRoleList)
+        .into(RolePermission)
+        .values(newRolePermissionList)
         .execute()
         .then( (insertResult: InsertResult) => {
           const end = performance.now();
-          this.logger.log(`bulkInsertUserRoles: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
-          return newUserRoleList;
+          this.logger.log(`bulkInsertRolePermissions: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
+          return newRolePermissionList;
         })
     })
   }
 
-  private findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<User[]> {
+  private findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Role[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
     const value = inputDto.search
     if(value) {
-      const whereByLike = { company: { id: companyId}, email: Like(`%${inputDto.search}%`), active: true };
+      const whereByLike = { company: { id: companyId}, name: Like(`%${inputDto.search}%`), active: true };
       const whereById   = { id: value, active: true };
       const where = isUUID(value) ? whereById : whereByLike;
 
-      return this.userRepository.find({
+      return this.roleRepository.find({
         take: limit,
         skip: (page - 1) * limit,
         where: where,
         relations: {
-          userRole: true
+          rolePermission: true
         }
       })
     }
 
     // * search by email
     if(inputDto.searchList) {
-      return this.userRepository.find({
+      return this.roleRepository.find({
         take: limit,
         skip: (page - 1) * limit,
         where: {
           company: {
             id: companyId
           },
-          email: In(inputDto.searchList),
+          name: In(inputDto.searchList),
           active: true,
         },
         relations: {
-          userRole: true
+          rolePermission: true
         }
       })
     }
 
     // * search all
-    return this.userRepository.find({
+    return this.roleRepository.find({
       take: limit,
       skip: (page - 1) * limit,
       where: { 
@@ -445,59 +414,36 @@ export class UserService {
         active: true 
       },
       relations: {
-        userRole: true
+        rolePermission: true
       }
     })
     
   }
 
-  private save(entity: User): Promise<User> {
+  private save(entity: Role): Promise<Role> {
     const start = performance.now();
 
-    const newEntity: User = this.userRepository.create(entity);
+    const newEntity: Role = this.roleRepository.create(entity);
 
-    return this.userRepository.save(newEntity)
-    .then( (entity: User) => {
+    return this.roleRepository.save(newEntity)
+    .then( (entity: Role) => {
       const end = performance.now();
       this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
       return entity;
     })
   }
-  
-  private findByEmail(email: string): Promise<User[]> {
 
-    // * search
-    return this.userRepository.find({
-      where: { 
-        email: email,
-        status: UserStatusEnum.AVAILABLE,
-        active: true 
-      }
-    })
-    
-  }
+  private generateRoleWithPermissionList(role: Role, rolePermissionList: RolePermission[]): RoleDto {
 
-  private generateUserWithRoleList(user: User, userRoleList: UserRole[]): UserDto {
+    let rolePermissionDtoList: RolePermissionDto[] = [];
 
-    let userRoleDtoList: UserRoleDto[] = [];
-    let userPermissionDtoList: UserPermissionDto[] = [];
-
-    if(userRoleList.length > 0){
-      // * generate user role list
-      userRoleDtoList = userRoleList.map( (userRole: UserRole) => new UserRoleDto(userRole.role.id, userRole.role.name) );
-      
-      // * generate user permission list
-      userPermissionDtoList = userRoleList.reduce( (acc: UserPermissionDto[], userRole: UserRole) => {  
-        const permissionDtoList     : PermissionDto[]     = userRole.role.rolePermission.map( rolePermission => rolePermission.permission );
-        const userPermissionDtoList : UserPermissionDto[] = permissionDtoList.map( permission => new UserPermissionDto(permission.id, permission.code) )
-        return acc.concat(userPermissionDtoList);
-
-      }, []);
+    if(rolePermissionList.length > 0){
+      rolePermissionDtoList = rolePermissionList.map( (rolePermission: RolePermission) => new RolePermissionDto(rolePermission.permission.id) );
     } 
 
-    // * generate user dto
-    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.status, userRoleDtoList, userPermissionDtoList, user.id);
+    // * generate role dto
+    const roleDto = new RoleDto(role.company.id, role.name, rolePermissionDtoList, role.id);
 
-    return userDto;
+    return roleDto;
   }
 }

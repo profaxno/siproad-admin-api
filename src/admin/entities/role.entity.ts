@@ -1,28 +1,20 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Company } from "./company.entity";
 import { UserRole } from "./user-role.entity";
+import { RolePermission } from "./role-permission.entity";
 
-@Entity("adm_user")
-export class User {
+@Entity("adm_role")
+export class Role {
   
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { length: 90 })
-  name: string;
-
   @Column('varchar', { length: 45, unique: true })
-  email: string;
-
-  @Column('varchar', { length: 255 })
-  password: string;
-
-  @Column('tinyint', { unsigned: true })
-  status: number;
+  name: string;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
-
+  
   @UpdateDateColumn({ type: 'timestamp' })
   updatedAt: Date;
 
@@ -38,8 +30,14 @@ export class User {
 
   @OneToMany(
     () => UserRole,
-    (userRole) => userRole.user,
+    (userRole) => userRole.role
+  )
+  userRole: UserRole;
+
+  @OneToMany(
+    () => RolePermission,
+    (rolePermission) => rolePermission.role,
     { eager: true }
   )
-  userRole: UserRole[];
+  rolePermission: RolePermission[];
 }

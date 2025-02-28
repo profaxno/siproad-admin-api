@@ -1,4 +1,4 @@
-import { In, Like, Repository } from 'typeorm';
+import { In, Like, Repository, Entity } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
@@ -10,9 +10,11 @@ import { CompanyDto } from './dto/company.dto';
 import { Company } from './entities/company.entity';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
 
-import { DataReplicationService } from 'src/data-replication/data-replication.service';
 import { ProcessEnum, SourceEnum } from 'src/data-replication/enum';
 import { MessageDto, DataReplicationDto } from 'src/data-replication/dto/data-replication.dto';
+import { DataReplicationService } from 'src/data-replication/data-replication.service';
+import { JsonBasic } from 'src/data-replication/interfaces/json-basic.interface';
+
 
 @Injectable()
 export class CompanyService {
@@ -33,15 +35,15 @@ export class CompanyService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
-  async updateCompanyBatch(dtoList: CompanyDto[]): Promise<ProcessSummaryDto>{
-    this.logger.warn(`updateCompanyBatch: starting process... listSize=${dtoList.length}`);
+  async updateBatch(dtoList: CompanyDto[]): Promise<ProcessSummaryDto>{
+    this.logger.warn(`updateBatch: starting process... listSize=${dtoList.length}`);
     const start = performance.now();
     
     let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(dtoList.length);
     let i = 0;
     for (const dto of dtoList) {
       
-      await this.updateCompany(dto)
+      await this.update(dto)
       .then( () => {
         processSummaryDto.rowsOK++;
         processSummaryDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
@@ -54,28 +56,27 @@ export class CompanyService {
     }
     
     const end = performance.now();
-    this.logger.log(`updateCompanyBatch: executed, runtime=${(end - start) / 1000} seconds`);
+    this.logger.log(`updateBatch: executed, runtime=${(end - start) / 1000} seconds`);
     return processSummaryDto;
   }
 
-  updateCompany(dto: CompanyDto): Promise<CompanyDto> {
+  update(dto: CompanyDto): Promise<CompanyDto> {
     if(!dto.id)
-      return this.createCompany(dto); // * create
+      return this.create(dto); // * create
     
-    this.logger.warn(`updateCompany: starting process... dto=${JSON.stringify(dto)}`);
+    this.logger.warn(`update: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     const inputDto: SearchInputDto = new SearchInputDto(dto.id);
     
-    return this.findCompaniesByParams({}, inputDto)
+    return this.findByParams({}, inputDto)
     .then( (entityList: Company[]) => {
 
       // * validate
       if(entityList.length == 0){
         const msg = `company not found, id=${dto.id}`;
-        this.logger.warn(`updateCompany: not executed (${msg})`);
+        this.logger.warn(`update: not executed (${msg})`);
         throw new NotFoundException(msg);
-        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
 
       let entity = entityList[0];
@@ -83,7 +84,7 @@ export class CompanyService {
       // * update
       entity.name = dto.name.toUpperCase();
       
-      return this.saveCompany(entity)
+      return this.save(entity)
       .then( (entity: Company) => {
         const dto = new CompanyDto(entity.name, entity.id); // * map to dto
 
@@ -93,9 +94,8 @@ export class CompanyService {
         this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
-        this.logger.log(`updateCompany: executed, runtime=${(end - start) / 1000} seconds`);
+        this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
         return dto;
-        //return new ProductsResponseDto(HttpStatus.OK, 'updated OK', [dto]);
       })
       
     })
@@ -103,35 +103,34 @@ export class CompanyService {
       if(error instanceof NotFoundException)
         throw error;
       
-      this.logger.error(`updateCompany: error`, error);
+      this.logger.error(`update: error`, error);
       throw error;
     })
 
   }
 
-  createCompany(dto: CompanyDto): Promise<CompanyDto> {
-    this.logger.warn(`createCompany: starting process... dto=${JSON.stringify(dto)}`);
+  create(dto: CompanyDto): Promise<CompanyDto> {
+    this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     // * find company
     const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
     
-    return this.findCompaniesByParams({}, inputDto)
+    return this.findByParams({}, inputDto)
     .then( (entityList: Company[]) => {
 
       // * validate
       if(entityList.length > 0){
         const msg = `company already exists, name=${dto.name}`;
-        this.logger.warn(`createCompany: not executed (${msg})`);
+        this.logger.warn(`create: not executed (${msg})`);
         throw new AlreadyExistException(msg);
-        //return new ProductsResponseDto(HttpStatus.BAD_REQUEST, msg);
       }
 
       // * create
       let entity = new Company();
-      entity.name = dto.name.toUpperCase()
+      entity.name = dto.name.toUpperCase();
       
-      return this.saveCompany(entity)
+      return this.save(entity)
       .then( (entity: Company) => {
         const dto = new CompanyDto(entity.name, entity.id); // * map to dto
 
@@ -141,9 +140,8 @@ export class CompanyService {
         this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
-        this.logger.log(`createCompany: OK, runtime=${(end - start) / 1000} seconds`);
+        this.logger.log(`create: OK, runtime=${(end - start) / 1000} seconds`);
         return dto;
-        //return new ProductsResponseDto(HttpStatus.OK, 'created OK', [dto]);
       })
 
     })
@@ -151,104 +149,115 @@ export class CompanyService {
       if(error instanceof AlreadyExistException)
         throw error;
 
-      this.logger.error(`createCompany: error`, error);
+      this.logger.error(`create: error`, error);
       throw error;
     })
 
   }
 
-  findCompanies(paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<CompanyDto[]> {
+  find(paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<CompanyDto[]> {
     const start = performance.now();
 
-    return this.findCompaniesByParams(paginationDto, inputDto)
+    return this.findByParams(paginationDto, inputDto)
     .then( (entityList: Company[]) => entityList.map( (entity: Company) => new CompanyDto(entity.name, entity.id) ) ) // * map entities to DTOs
     .then( (dtoList: CompanyDto[]) => {
 
       if(dtoList.length == 0){
         const msg = `companies not found`;
-        this.logger.warn(`findCompanies: ${msg}`);
+        this.logger.warn(`find: ${msg}`);
         throw new NotFoundException(msg);
-        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
 
       const end = performance.now();
-      this.logger.log(`findCompanies: executed, runtime=${(end - start) / 1000} seconds`);
+      this.logger.log(`find: executed, runtime=${(end - start) / 1000} seconds`);
       return dtoList;
-      //return new ProductsResponseDto(HttpStatus.OK, 'OK', dtoList);
     })
     .catch(error => {
       if(error instanceof NotFoundException)
         throw error;
 
-      this.logger.error(`findCompanies: error`, error);
+      this.logger.error(`find: error`, error);
       throw error;
     })
 
   }
 
-  findOneCompanyByValue(value: string): Promise<CompanyDto[]> {
+  findOneByValue(value: string): Promise<CompanyDto[]> {
     const start = performance.now();
 
     const inputDto: SearchInputDto = new SearchInputDto(value);
     
-    return this.findCompaniesByParams({}, inputDto)
+    return this.findByParams({}, inputDto)
     .then( (entityList: Company[]) => entityList.map( (entity: Company) => new CompanyDto(entity.name, entity.id) ) ) // * map entities to DTOs
     .then( (dtoList: CompanyDto[]) => {
 
       if(dtoList.length == 0){
         const msg = `company not found, value=${value}`;
-        this.logger.warn(`findOneCompanyByValue: ${msg}`);
+        this.logger.warn(`findOneByValue: ${msg}`);
         throw new NotFoundException(msg);
-        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
 
       const end = performance.now();
-      this.logger.log(`findOneCompanyByValue: executed, runtime=${(end - start) / 1000} seconds`);
+      this.logger.log(`findOneByValue: executed, runtime=${(end - start) / 1000} seconds`);
       return dtoList;
-      //return new ProductsResponseDto(HttpStatus.OK, 'OK', dtoList);
     })
     .catch(error => {
       if(error instanceof NotFoundException)
         throw error;
 
-      this.logger.error(`findOneCompanyByValue: error`, error);
+      this.logger.error(`findOneByValue: error`, error);
       throw error;
     })
     
   }
 
-  removeCompany(id: string): Promise<string> {
-    this.logger.log(`removeCompany: starting process... id=${id}`);
+  remove(id: string): Promise<string> {
+    this.logger.log(`remove: starting process... id=${id}`);
     const start = performance.now();
 
     const inputDto: SearchInputDto = new SearchInputDto(id);
     
-    return this.findCompaniesByParams({}, inputDto)
+    return this.findByParams({}, inputDto)
     .then( (entityList: Company[]) => {
       
       if(entityList.length == 0){
         const msg = `company not found, id=${id}`;
-        this.logger.warn(`removeCompany: not executed (${msg})`);
+        this.logger.warn(`remove: not executed (${msg})`);
         throw new NotFoundException(msg);
-        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
 
-      // * delete
-      return this.companyRepository.delete(id)
-      .then( () => {
+      const entity = entityList[0];
+      entity.active = false;
+
+      // * delete: update field active
+      return this.save(entity)
+      .then( (entity: Company) => {
 
         // * replication data
-        const entity = entityList[0];
-        const dto = new CompanyDto(entity.name, entity.id); // * map to dto
-        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(dto));
+        const jsonBasic: JsonBasic = { id: entity.id }
+        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(jsonBasic));
         const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
         this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
-        this.logger.log(`removeCompany: OK, runtime=${(end - start) / 1000} seconds`);
+        this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
         return 'deleted';
-        //return new ProductsResponseDto(HttpStatus.OK, 'delete OK');
       })
+
+      // return this.companyRepository.delete(id)
+      // .then( () => {
+
+      //   // * replication data
+      //   const entity = entityList[0];
+      //   const dto = new CompanyDto(entity.name, entity.id); // * map to dto
+      //   const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(dto));
+      //   const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
+      //   this.replicationService.sendMessages(dataReplicationDto);
+
+      //   const end = performance.now();
+      //   this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
+      //   return 'deleted';
+      // })
 
     })
     .catch(error => {
@@ -257,25 +266,24 @@ export class CompanyService {
 
       if(error.errno == 1217) {
         const msg = 'company is being used';
-        this.logger.warn(`removeCompany: not executed (${msg})`, error);
+        this.logger.warn(`remove: not executed (${msg})`, error);
         throw new IsBeingUsedException(msg);
-        //return new ProductsResponseDto(HttpStatus.BAD_REQUEST, 'product is being used');
       }
 
-      this.logger.error('removeCompany: error', error);
+      this.logger.error('remove: error', error);
       throw error;
     })
 
   }
 
-  findCompaniesByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<Company[]> {
+  findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<Company[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
     if(inputDto.search) {
-      const whereByName = { name: Like(`%${inputDto.search}%`), active: true };
+      const whereByLike = { name: Like(`%${inputDto.search}%`), active: true };
       const whereById   =  { id: inputDto.search, active: true };
-      const where = isUUID(inputDto.search) ? whereById : whereByName;
+      const where = isUUID(inputDto.search) ? whereById : whereByLike;
 
       return this.companyRepository.find({
         take: limit,
@@ -305,7 +313,38 @@ export class CompanyService {
     
   }
 
-  private saveCompany(entity: Company): Promise<Company> {
+  synchronize(paginationDto: SearchPaginationDto): Promise<string> {
+    this.logger.warn(`synchronize: processing paginationDto=${JSON.stringify(paginationDto)}`);
+
+    return this.findAll(paginationDto)
+    .then( (companyList: Company[]) => {
+      
+      if(companyList.length == 0){
+        const msg = `synchronization executed`;
+        this.logger.log(`synchronize: ${msg}`);
+        return msg;
+      }
+
+      const companyDtoList = companyList.map( value => new CompanyDto(value.name, value.id) );
+      const messageDtoList: MessageDto[] = companyDtoList.map( value => new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(value)) );
+      const dataReplicationDto: DataReplicationDto = new DataReplicationDto(messageDtoList);
+      
+      return this.replicationService.sendMessages(dataReplicationDto)
+      .then( () => {
+        paginationDto.page++;
+        return this.synchronize(paginationDto);
+      })
+      
+    })
+    .catch( error => {
+      const msg = `not executed (unexpected error)`;
+      this.logger.error(`synchronize: ${msg}, paginationDto=${JSON.stringify(paginationDto)}`, error);
+      return msg;
+    })
+
+  }
+
+  private save(entity: Company): Promise<Company> {
     const start = performance.now();
 
     const newEntity: Company = this.companyRepository.create(entity);
@@ -313,9 +352,20 @@ export class CompanyService {
     return this.companyRepository.save(newEntity)
     .then( (entity: Company) => {
       const end = performance.now();
-      this.logger.log(`saveCompany: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
+      this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
       return entity;
     })
+  }
+
+  private findAll(paginationDto: SearchPaginationDto): Promise<Company[]> {
+    const {page=1, limit=this.dbDefaultLimit} = paginationDto;
+
+    // * search all
+    return this.companyRepository.find({
+      take: limit,
+      skip: (page - 1) * limit
+    })
+    
   }
 
 }

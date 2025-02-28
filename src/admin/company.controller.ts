@@ -2,8 +2,7 @@ import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxno
 
 import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
 
-import { CompanyDto } from './dto/company.dto';
-import { AdminResponseDto } from './dto/admin-response-dto';
+import { CompanyDto, AdminResponseDto } from './dto';
 import { CompanyService } from './company.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
 
@@ -18,15 +17,15 @@ export class CompanyController {
 
   @Post('/companies/updateBatch')
   @HttpCode(HttpStatus.OK)
-  updateCompanyBatch(@Body() dtoList: CompanyDto[]): Promise<AdminResponseDto> {
-    this.logger.log(`>>> updateCompanyBatch: listSize=${dtoList.length}`);
+  updateBatch(@Body() dtoList: CompanyDto[]): Promise<AdminResponseDto> {
+    this.logger.log(`>>> updateBatch: listSize=${dtoList.length}`);
     const start = performance.now();
 
-    return this.companyService.updateCompanyBatch(dtoList)
+    return this.companyService.updateBatch(dtoList)
     .then( (processSummaryDto: ProcessSummaryDto) => {
       const response = new AdminResponseDto(HttpStatus.OK, "executed", undefined, processSummaryDto);
       const end = performance.now();
-      this.logger.log(`<<< updateCompanyBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      this.logger.log(`<<< updateBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
@@ -38,15 +37,15 @@ export class CompanyController {
 
   @Patch('/companies/update')
   @HttpCode(HttpStatus.OK)
-  updateCompany(@Body() dto: CompanyDto): Promise<AdminResponseDto> {
-    this.logger.log(`>>> updateCompany: dto=${JSON.stringify(dto)}`);
+  update(@Body() dto: CompanyDto): Promise<AdminResponseDto> {
+    this.logger.log(`>>> update: dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    return this.companyService.updateCompany(dto)
+    return this.companyService.update(dto)
     .then( (dto: CompanyDto) => {
       const response = new AdminResponseDto(HttpStatus.OK, 'executed', 1, [dto]);
       const end = performance.now();
-      this.logger.log(`<<< updateCompany: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      this.logger.log(`<<< update: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
@@ -62,15 +61,15 @@ export class CompanyController {
   }
 
   @Get('/companies')
-  findCompanies(@Query() paginationDto: SearchPaginationDto, @Body() inputDto: SearchInputDto): Promise<AdminResponseDto> {
-    this.logger.log(`>>> findCompanies: paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
+  find(@Query() paginationDto: SearchPaginationDto, @Body() inputDto: SearchInputDto): Promise<AdminResponseDto> {
+    this.logger.log(`>>> find: paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
     const start = performance.now();
     
-    return this.companyService.findCompanies(paginationDto, inputDto)
+    return this.companyService.find(paginationDto, inputDto)
      .then( (dtoList: CompanyDto[]) => {
       const response = new AdminResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
-      this.logger.log(`<<< findCompanies: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      this.logger.log(`<<< find: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
@@ -83,15 +82,15 @@ export class CompanyController {
   }
 
   @Get('/companies/:value')
-  findOneCompanyByValue(@Param('value') value: string): Promise<AdminResponseDto> {
-    this.logger.log(`>>> findOneCompanyByValue: value=${value}`);
+  findOneByValue(@Param('value') value: string): Promise<AdminResponseDto> {
+    this.logger.log(`>>> findOneByValue: value=${value}`);
     const start = performance.now();
 
-    return this.companyService.findOneCompanyByValue(value)
+    return this.companyService.findOneByValue(value)
     .then( (dtoList: CompanyDto[]) => {
       const response = new AdminResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
-      this.logger.log(`<<< findOneCompanyByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      this.logger.log(`<<< findOneByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
@@ -105,15 +104,15 @@ export class CompanyController {
   }
 
   @Delete('companies/:id')
-  removeCompany(@Param('id', ParseUUIDPipe) id: string): Promise<AdminResponseDto> {
-    this.logger.log(`>>> removeCompany: id=${id}`);
+  remove(@Param('id', ParseUUIDPipe) id: string): Promise<AdminResponseDto> {
+    this.logger.log(`>>> remove: id=${id}`);
     const start = performance.now();
 
-    return this.companyService.removeCompany(id)
+    return this.companyService.remove(id)
     .then( (msg: string) => {
       const response = new AdminResponseDto(HttpStatus.OK, msg);
       const end = performance.now();
-      this.logger.log(`<<< removeCompany: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      this.logger.log(`<<< remove: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
@@ -126,6 +125,28 @@ export class CompanyController {
       this.logger.error(error.stack);
       return new AdminResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
+  }
+
+  @Post('/companies/synchronize')
+  @HttpCode(HttpStatus.OK)
+  synchronize(@Query() paginationDto: SearchPaginationDto): Promise<AdminResponseDto> {
+    this.logger.log('>>> synchronize');
+    const start = performance.now();
+
+    paginationDto.page=1;
+
+    return this.companyService.synchronize(paginationDto)
+    .then( (msg: string) => {
+      const response = new AdminResponseDto(HttpStatus.OK, msg);
+      const end = performance.now();
+      this.logger.log(`<<< synchronize: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      return response;
+    })
+    .catch( (error: Error) => {
+      this.logger.error(error.stack);
+      return new AdminResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+    })
+
   }
   
 }
