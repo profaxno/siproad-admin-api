@@ -12,7 +12,7 @@ import { User, UserRole, Role, Company } from './entities';
 
 import { CompanyService } from './company.service';
 
-import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 
 @Injectable()
 export class UserService {
@@ -71,58 +71,37 @@ export class UserService {
     this.logger.warn(`update: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    // * find company
-    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
-    
-    return this.companyService.findByParams({}, inputDto)
-    .then( (companyList: Company[]) => {
+    // * find user
+    const inputDto: SearchInputDto = new SearchInputDto(dto.id);
+      
+    return this.findByParams({}, inputDto)
+    .then( (entityList: User[]) => {
 
-      if(companyList.length == 0){
-        const msg = `company not found, id=${dto.id}`;
+      // * validate
+      if(entityList.length == 0){
+        const msg = `user not found, id=${dto.id}`;
         this.logger.warn(`update: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
+      
+      // * update
+      const entity = entityList[0];
 
-      const company = companyList[0];
+      return this.prepareEntity(entity, dto) // * prepare
+      .then( (entity: User) => this.save(entity) ) // * update
+      .then( (entity: User) => {
 
-      // * find user
-      const inputDto: SearchInputDto = new SearchInputDto(dto.id);
-        
-      return this.findByParams({}, inputDto)
-      .then( (entityList: User[]) => {
+        return this.updateUserRole(entity, dto.roleList)
+        .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
+        .then( (dto: UserDto) => {
 
-        // * validate
-        if(entityList.length == 0){
-          const msg = `user not found, id=${dto.id}`;
-          this.logger.warn(`update: not executed (${msg})`);
-          throw new NotFoundException(msg);
-        }
-  
-        let entity = entityList[0];
-        
-        // * update
-        entity.company = company;
-        entity.name = dto.name.toUpperCase();
-        entity.email = dto.email.toUpperCase();;
-        entity.password = dto.password;
-        entity.status = dto.status;
-        
-        return this.save(entity)
-        .then( (entity: User) => {
-
-          return this.updateUserRole(entity, dto.roleList)
-          .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
-          .then( (dto: UserDto) => {
-
-            const end = performance.now();
-            this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-            return dto;
-          })
-
+          const end = performance.now();
+          this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
         })
-        
-      })
 
+      })
+      
     })
     .catch(error => {
       if(error instanceof NotFoundException)
@@ -138,54 +117,35 @@ export class UserService {
     this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    // * find company
-    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
-    
-    return this.companyService.findByParams({}, inputDto)
-    .then( (companyList: Company[]) => {
+    // * find user
+    const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.email]);
+      
+    return this.findByParams({}, inputDto, dto.companyId)
+    .then( (entityList: User[]) => {
 
-      if(companyList.length == 0){
-        const msg = `company not found, id=${dto.id}`;
+      // * validate
+      if(entityList.length > 0){
+        const msg = `user already exists, email=${dto.email}`;
         this.logger.warn(`create: not executed (${msg})`);
-        throw new NotFoundException(msg);
+        throw new AlreadyExistException(msg);
       }
 
-      const company = companyList[0];
+      // * create
+      const entity = new User();
 
-      // * find user
-      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.email]);
-        
-      return this.findByParams({}, inputDto, company.id)
-      .then( (entityList: User[]) => {
+      return this.prepareEntity(entity, dto) // * prepare
+      .then( (entity: User) => this.save(entity) ) // * update
+      .then( (entity: User) => {
 
-        // * validate
-        if(entityList.length > 0){
-          const msg = `user already exists, email=${dto.email}`;
-          this.logger.warn(`create: not executed (${msg})`);
-          throw new AlreadyExistException(msg);
-        }
-  
-        // * create
-        let entity = new User();
-        entity.company = company;
-        entity.name = dto.name.toUpperCase();
-        entity.email = dto.email.toUpperCase();;
-        entity.password = dto.password;
-  
-        return this.save(entity)
-        .then( (entity: User) => {
+        return this.updateUserRole(entity, dto.roleList)
+        .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
+        .then( (dto: UserDto) => {
 
-          return this.updateUserRole(entity, dto.roleList)
-          .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
-          .then( (dto: UserDto) => {
-
-            const end = performance.now();
-            this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
-            return dto;
-          })
-
+          const end = performance.now();
+          this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
         })
-  
+
       })
 
     })
@@ -271,13 +231,26 @@ export class UserService {
         throw new NotFoundException(msg);
       }
 
-      // * delete
-      return this.userRepository.delete(id)
+      // * prepare entity
+      const entity = entityList[0];
+      entity.active = false;
+
+      // * delete: update field active
+      return this.save(entity)
       .then( () => {
+
         const end = performance.now();
         this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
         return 'deleted';
       })
+
+      // // * delete
+      // return this.userRepository.delete(id)
+      // .then( () => {
+      //   const end = performance.now();
+      //   this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
+      //   return 'deleted';
+      // })
 
     })
     .catch(error => {
@@ -321,6 +294,32 @@ export class UserService {
       throw error;
     })
 
+  }
+
+  private prepareEntity(entity: User, dto: UserDto): Promise<User> {
+
+    // * find company
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
+    
+    return this.companyService.findByParams({}, inputDto)
+    .then( (companyList: Company[]) => {
+
+      if(companyList.length == 0){
+        const msg = `company not found, id=${dto.companyId}`;
+        this.logger.warn(`create: not executed (${msg})`);
+        throw new NotFoundException(msg);
+      }
+        
+      entity.company  = companyList[0];
+      entity.name     = dto.name.toUpperCase();
+      entity.email    = dto.email.toUpperCase();;
+      entity.password = dto.password;
+      entity.status   = dto.status;
+
+      return entity;
+      
+    })
+    
   }
 
   private updateUserRole(user: User, userRoleDtoList: UserRoleDto[] = []): Promise<UserRole[]> {
@@ -402,7 +401,7 @@ export class UserService {
     // * search by partial name
     const value = inputDto.search
     if(value) {
-      const whereByLike = { company: { id: companyId}, email: Like(`%${inputDto.search}%`), active: true };
+      const whereByLike = { company: { id: companyId }, email: Like(`%${inputDto.search}%`), active: true };
       const whereById   = { id: value, active: true };
       const where = isUUID(value) ? whereById : whereByLike;
 

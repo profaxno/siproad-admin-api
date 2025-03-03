@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { PermissionDto } from './dto/permission.dto';
 import { Permission } from './entities/permission.entity';
-import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 
 @Injectable()
 export class PermissionService {
@@ -74,7 +74,7 @@ export class PermissionService {
       let entity = entityList[0];
       
       // * update
-      entity.label = dto.label.toUpperCase();
+      entity.label = dto.label.toUpperCase(); // TODO: cambiar todos los labels a name :(
       entity.code = dto.code.toUpperCase();
       
       return this.save(entity)

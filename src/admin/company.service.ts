@@ -1,4 +1,4 @@
-import { In, Like, Repository, Entity } from 'typeorm';
+import { In, Like, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { CompanyDto } from './dto/company.dto';
 import { Company } from './entities/company.entity';
-import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 
 import { ProcessEnum, SourceEnum } from 'src/data-replication/enum';
 import { MessageDto, DataReplicationDto } from 'src/data-replication/dto/data-replication.dto';
@@ -226,10 +226,10 @@ export class CompanyService {
         throw new NotFoundException(msg);
       }
 
+      // * delete: update field active
       const entity = entityList[0];
       entity.active = false;
 
-      // * delete: update field active
       return this.save(entity)
       .then( (entity: Company) => {
 

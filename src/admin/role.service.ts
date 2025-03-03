@@ -11,7 +11,7 @@ import { Role } from './entities/role.entity';
 
 import { Company } from './entities/company.entity';
 import { CompanyService } from './company.service';
-import { AlreadyExistException, IsBeingUsedException } from './exceptions/admin.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 import { RolePermission } from './entities/role-permission.entity';
 import { Permission } from './entities/permission.entity';
 
@@ -71,56 +71,38 @@ export class RoleService {
     
     this.logger.warn(`update: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
-
-    // * find company
-    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
     
-    return this.companyService.findByParams({}, inputDto)
-    .then( (companyList: Company[]) => {
+    // * find role
+    const inputDto: SearchInputDto = new SearchInputDto(dto.id);
+      
+    return this.findByParams({}, inputDto)
+    .then( (entityList: Role[]) => {
 
-      if(companyList.length == 0){
-        const msg = `company not found, id=${dto.id}`;
+      // * validate
+      if(entityList.length == 0){
+        const msg = `role not found, id=${dto.id}`;
         this.logger.warn(`update: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
 
-      const company = companyList[0];
+      // * update
+      const entity = entityList[0];
+      
+      return this.prepareEntity(entity, dto) // * prepare
+      .then( (entity: Role) => this.save(entity) ) // * update
+      .then( (entity: Role) => {
 
-      // * find role
-      const inputDto: SearchInputDto = new SearchInputDto(dto.id);
-        
-      return this.findByParams({}, inputDto)
-      .then( (entityList: Role[]) => {
+        return this.updateRolePermission(entity, dto.permissionList)
+        .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+        .then( (dto: RoleDto) => {
 
-        // * validate
-        if(entityList.length == 0){
-          const msg = `role not found, id=${dto.id}`;
-          this.logger.warn(`update: not executed (${msg})`);
-          throw new NotFoundException(msg);
-        }
-  
-        let entity = entityList[0];
-        
-        // * update
-        entity.company = company;
-        entity.name = dto.name.toUpperCase();
-
-        return this.save(entity)
-        .then( (entity: Role) => {
-
-          return this.updateRolePermission(entity, dto.permissionList)
-          .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
-          .then( (dto: RoleDto) => {
-
-            const end = performance.now();
-            this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-            return dto;
-          })
-
+          const end = performance.now();
+          this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
         })
-        
-      })
 
+      })
+      
     })
     .catch(error => {
       if(error instanceof NotFoundException)
@@ -136,52 +118,35 @@ export class RoleService {
     this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    // * find company
-    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
-    
-    return this.companyService.findByParams({}, inputDto)
-    .then( (companyList: Company[]) => {
+    // * find role
+    const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
+      
+    return this.findByParams({}, inputDto, dto.companyId)
+    .then( (entityList: Role[]) => {
 
-      if(companyList.length == 0){
-        const msg = `company not found, id=${dto.id}`;
+      // * validate
+      if(entityList.length > 0){
+        const msg = `role already exists, name=${dto.name}`;
         this.logger.warn(`create: not executed (${msg})`);
-        throw new NotFoundException(msg);
+        throw new AlreadyExistException(msg);
       }
 
-      const company = companyList[0];
+      // * create
+      const entity = new Role();
+      
+      return this.prepareEntity(entity, dto) // * prepare
+      .then( (entity: Role) => this.save(entity) ) // * update
+      .then( (entity: Role) => {
 
-      // * find role
-      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
-        
-      return this.findByParams({}, inputDto, company.id)
-      .then( (entityList: Role[]) => {
+        return this.updateRolePermission(entity, dto.permissionList)
+        .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+        .then( (dto: RoleDto) => {
 
-        // * validate
-        if(entityList.length > 0){
-          const msg = `role already exists, name=${dto.name}`;
-          this.logger.warn(`create: not executed (${msg})`);
-          throw new AlreadyExistException(msg);
-        }
-  
-        // * create
-        let entity = new Role();
-        entity.company = company;
-        entity.name = dto.name.toUpperCase();
-        
-        return this.save(entity)
-        .then( (entity: Role) => {
-
-          return this.updateRolePermission(entity, dto.permissionList)
-          .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
-          .then( (dto: RoleDto) => {
-
-            const end = performance.now();
-            this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
-            return dto;
-          })
-
+          const end = performance.now();
+          this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
         })
-  
+
       })
 
     })
@@ -290,6 +255,29 @@ export class RoleService {
       throw error;
     })
 
+  }
+
+  private prepareEntity(entity: Role, dto: RoleDto): Promise<Role> {
+  
+    // * find company
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
+    
+    return this.companyService.findByParams({}, inputDto)
+    .then( (companyList: Company[]) => {
+
+      if(companyList.length == 0){
+        const msg = `company not found, id=${dto.companyId}`;
+        this.logger.warn(`create: not executed (${msg})`);
+        throw new NotFoundException(msg);
+      }
+
+      entity.company = companyList[0];
+      entity.name    = dto.name.toUpperCase();
+      
+      return entity;
+      
+    })
+    
   }
 
   private updateRolePermission(role: Role, rolePermissionDtoList: RolePermissionDto[] = []): Promise<RolePermission[]> {
