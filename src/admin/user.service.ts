@@ -186,30 +186,30 @@ export class UserService {
 
   }
 
-  findOneByValue(companyId: string, value: string): Promise<UserDto[]> {
+  findOneById(id: string, companyId?: string): Promise<UserDto[]> {
     const start = performance.now();
 
-    const inputDto: SearchInputDto = new SearchInputDto(value);
+    const inputDto: SearchInputDto = new SearchInputDto(id);
     
     return this.findByParams({}, inputDto, companyId)
     .then( (entityList: User[]) => entityList.map( (entity: User) => this.generateUserWithRoleList(entity, entity.userRole) ) )// * map entities to DTOs
     .then( (dtoList: UserDto[]) => {
       
       if(dtoList.length == 0){
-        const msg = `user not found, value=${value}`;
-        this.logger.warn(`findOneByValue: ${msg}`);
+        const msg = `user not found, id=${id}`;
+        this.logger.warn(`findOneById: ${msg}`);
         throw new NotFoundException(msg);
       }
 
       const end = performance.now();
-      this.logger.log(`findOneByValue: executed, runtime=${(end - start) / 1000} seconds`);
+      this.logger.log(`findOneById: executed, runtime=${(end - start) / 1000} seconds`);
       return dtoList;
     })
     .catch(error => {
       if(error instanceof NotFoundException)
         throw error;
 
-      this.logger.error(`findOneByValue: error`, error);
+      this.logger.error(`findOneById: error`, error);
       throw error;
     })
 
@@ -398,12 +398,12 @@ export class UserService {
   private findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<User[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
-    // * search by partial name
+    // * search by id or partial value
     const value = inputDto.search
     if(value) {
-      const whereByLike = { company: { id: companyId }, email: Like(`%${inputDto.search}%`), active: true };
       const whereById   = { id: value, active: true };
-      const where = isUUID(value) ? whereById : whereByLike;
+      const whereByLike = { company: { id: companyId }, email: Like(`%${value}%`), active: true };
+      const where       = isUUID(value) ? whereById : whereByLike;
 
       return this.userRepository.find({
         take: limit,
@@ -415,7 +415,7 @@ export class UserService {
       })
     }
 
-    // * search by email
+    // * search by value list
     if(inputDto.searchList) {
       return this.userRepository.find({
         take: limit,

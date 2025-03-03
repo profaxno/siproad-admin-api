@@ -32,7 +32,12 @@ export class RolePermissionDto {
   @IsUUID()
   id: string;
   
-  constructor(id: string){
+  @IsOptional()
+  @IsString()
+  label: string;
+
+  constructor(id: string, label: string){
     this.id = id;
+    this.label = label;
   }
 }

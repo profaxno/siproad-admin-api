@@ -187,30 +187,30 @@ export class RoleService {
 
   }
 
-  findOneByValue(companyId: string, value: string): Promise<RoleDto[]> {
+  findOneById(id: string, companyId?: string): Promise<RoleDto[]> {
     const start = performance.now();
 
-    const inputDto: SearchInputDto = new SearchInputDto(value);
+    const inputDto: SearchInputDto = new SearchInputDto(id);
     
     return this.findByParams({}, inputDto, companyId)
     .then( (entityList: Role[]) => entityList.map( (entity: Role) => this.generateRoleWithPermissionList(entity, entity.rolePermission) ) )// * map entities to DTOs
     .then( (dtoList: RoleDto[]) => {
       
       if(dtoList.length == 0){
-        const msg = `role not found, value=${value}`;
-        this.logger.warn(`findOneByValue: ${msg}`);
+        const msg = `role not found, id=${id}`;
+        this.logger.warn(`findOneById: ${msg}`);
         throw new NotFoundException(msg);
       }
 
       const end = performance.now();
-      this.logger.log(`findOneByValue: executed, runtime=${(end - start) / 1000} seconds`);
+      this.logger.log(`findOneById: executed, runtime=${(end - start) / 1000} seconds`);
       return dtoList;
     })
     .catch(error => {
       if(error instanceof NotFoundException)
         throw error;
 
-      this.logger.error(`findOneByValue: error`, error);
+      this.logger.error(`findOneById: error`, error);
       throw error;
     })
 
@@ -356,12 +356,12 @@ export class RoleService {
   private findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Role[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
-    // * search by partial name
+    // * search by id or partial value
     const value = inputDto.search
     if(value) {
-      const whereByLike = { company: { id: companyId}, name: Like(`%${inputDto.search}%`), active: true };
       const whereById   = { id: value, active: true };
-      const where = isUUID(value) ? whereById : whereByLike;
+      const whereByLike = { company: { id: companyId}, name: Like(`%${value}%`), active: true };
+      const where       = isUUID(value) ? whereById : whereByLike;
 
       return this.roleRepository.find({
         take: limit,
@@ -373,7 +373,7 @@ export class RoleService {
       })
     }
 
-    // * search by email
+    // * search by value list
     if(inputDto.searchList) {
       return this.roleRepository.find({
         take: limit,
@@ -426,7 +426,7 @@ export class RoleService {
     let rolePermissionDtoList: RolePermissionDto[] = [];
 
     if(rolePermissionList.length > 0){
-      rolePermissionDtoList = rolePermissionList.map( (rolePermission: RolePermission) => new RolePermissionDto(rolePermission.permission.id) );
+      rolePermissionDtoList = rolePermissionList.map( (rolePermission: RolePermission) => new RolePermissionDto(rolePermission.permission.id, rolePermission.permission.label) );
     } 
 
     // * generate role dto
