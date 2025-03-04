@@ -40,5 +40,6 @@ Api central del sistema siproad que permite gestionar elementos, productos y ord
 ## Configuración ambiente stg
 
 ### Configuración de la base de datos y api (docker)
+* Apuntar el archivo .env a las variables de staging.
 * Descomentar la creacion de la api en el docker-compose.
 * Crear contenedor de base de datos y api ```docker-compose -p siproad up -d```
