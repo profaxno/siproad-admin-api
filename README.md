@@ -3,7 +3,7 @@
 </p>
 
 # siproad-admin-api
-Api central del sistema siproad que permite gestionar elementos, productos y ordenes.
+Api del sistema siproad que permite gestionar compañias, usuarios, roles y permisos.
 
 ```
 - Lenguaje: Nodejs (Nest), typescript.
