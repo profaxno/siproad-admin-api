@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  app.setGlobalPrefix('siproad-admin')
+  app.setGlobalPrefix('siproad-admin');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -32,14 +32,14 @@ async function bootstrap() {
   
   await app.listen(process.env.PORT);
   
-  const env = process.env.ENV.padEnd(18, ' ');
+  const env = process.env.ENV.padEnd(20, ' ');
 
   console.log(`
-╔══════════════════════════╗
-║ @org: Profaxno Company   ║
-║ @app: siproad-admin-api  ║
+╔════════════════════════════╗
+║ @org: Profaxno Company     ║
+║ @app: siproad-admin-api    ║
 ║ @env: ${env} ║
-╚══════════════════════════╝
+╚════════════════════════════╝
 
 running at PORT: ${process.env.PORT}...`
   );

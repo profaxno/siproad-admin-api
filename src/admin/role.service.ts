@@ -430,7 +430,7 @@ export class RoleService {
     } 
 
     // * generate role dto
-    const roleDto = new RoleDto(role.company.id, role.name, rolePermissionDtoList, role.id);
+    const roleDto = new RoleDto(role.company.id, role.name, role.id, rolePermissionDtoList);
 
     return roleDto;
   }

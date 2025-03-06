@@ -495,7 +495,7 @@ export class UserService {
     } 
 
     // * generate user dto
-    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.status, userRoleDtoList, userPermissionDtoList, user.id);
+    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.id, user.status, userRoleDtoList, userPermissionDtoList);
 
     return userDto;
   }

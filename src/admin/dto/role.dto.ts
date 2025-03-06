@@ -20,11 +20,11 @@ export class RoleDto {
   @Type(() => RolePermissionDto)
   permissionList?: RolePermissionDto[];
 
-  constructor(companyId: string, name: string, permissionList?: RolePermissionDto[], id?: string) {
+  constructor(companyId: string, name: string, id?: string, permissionList?: RolePermissionDto[]) {
     this.companyId = companyId;
     this.name = name;
-    this.permissionList = permissionList;
     this.id = id;
+    this.permissionList = permissionList;
   }
 }
 

@@ -86,7 +86,7 @@ export class CompanyService {
       
       return this.save(entity)
       .then( (entity: Company) => {
-        const dto = new CompanyDto(entity.name, entity.id); // * map to dto
+        dto = new CompanyDto(entity.name, entity.id); // * map to dto
 
         // * replication data
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));
@@ -132,7 +132,7 @@ export class CompanyService {
       
       return this.save(entity)
       .then( (entity: Company) => {
-        const dto = new CompanyDto(entity.name, entity.id); // * map to dto
+        dto = new CompanyDto(entity.name, entity.id); // * map to dto
 
         // * replication data
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));

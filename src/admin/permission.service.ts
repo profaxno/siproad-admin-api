@@ -79,7 +79,7 @@ export class PermissionService {
       
       return this.save(entity)
       .then( (entity: Permission) => {
-        const dto = new PermissionDto(entity.label, entity.code, entity.id); // * map to dto
+        dto = new PermissionDto(entity.label, entity.code, entity.id); // * map to dto
 
         const end = performance.now();
         this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
@@ -121,7 +121,7 @@ export class PermissionService {
       
       return this.save(entity)
       .then( (entity: Permission) => {
-        const dto = new PermissionDto(entity.label, entity.code, entity.id); // * map to dto
+        dto = new PermissionDto(entity.label, entity.code, entity.id); // * map to dto
 
         const end = performance.now();
         this.logger.log(`create: OK, runtime=${(end - start) / 1000} seconds`);
