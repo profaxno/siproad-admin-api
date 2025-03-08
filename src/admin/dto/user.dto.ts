@@ -11,15 +11,15 @@ export class UserDto {
   companyId: string;
 
   @IsString()
-  @MaxLength(90)
+  @MaxLength(50)
   name: string;
 
   @IsEmail()
-  @MaxLength(45)
+  @MaxLength(50)
   email: string;;
 
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100)
   password: string;
 
   @IsInt()
@@ -57,6 +57,7 @@ export class UserRoleDto {
   
   @IsString()
   @IsOptional()
+  @MaxLength(50)
   name: string;
   
   constructor(id: string, name?: string){
@@ -70,6 +71,7 @@ export class UserPermissionDto {
   id: string;
 
   @IsString()
+  @MaxLength(50)
   code: string
   
   constructor(id: string, code: string){

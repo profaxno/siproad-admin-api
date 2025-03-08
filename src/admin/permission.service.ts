@@ -70,16 +70,15 @@ export class PermissionService {
         this.logger.warn(`update: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
-
-      let entity = entityList[0];
       
       // * update
-      entity.label = dto.label.toUpperCase(); // TODO: cambiar todos los labels a name :(
+      let entity = entityList[0];
+      entity.name = dto.name.toUpperCase(); // TODO: cambiar todos los names a name :(
       entity.code = dto.code.toUpperCase();
       
       return this.save(entity)
       .then( (entity: Permission) => {
-        dto = new PermissionDto(entity.label, entity.code, entity.id); // * map to dto
+        dto = new PermissionDto(entity.name, entity.code, entity.id); // * map to dto
 
         const end = performance.now();
         this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
@@ -116,12 +115,12 @@ export class PermissionService {
 
       // * create
       let entity = new Permission();
-      entity.label = dto.label.toUpperCase();
+      entity.name = dto.name.toUpperCase();
       entity.code = dto.code.toUpperCase();
       
       return this.save(entity)
       .then( (entity: Permission) => {
-        dto = new PermissionDto(entity.label, entity.code, entity.id); // * map to dto
+        dto = new PermissionDto(entity.name, entity.code, entity.id); // * map to dto
 
         const end = performance.now();
         this.logger.log(`create: OK, runtime=${(end - start) / 1000} seconds`);
@@ -143,7 +142,7 @@ export class PermissionService {
     const start = performance.now();
 
     return this.findByParams(paginationDto, inputDto)
-    .then( (entityList: Permission[]) => entityList.map( (entity: Permission) => new PermissionDto(entity.label, entity.code, entity.id) ) ) // * map entities to DTOs
+    .then( (entityList: Permission[]) => entityList.map( (entity: Permission) => new PermissionDto(entity.name, entity.code, entity.id) ) ) // * map entities to DTOs
     .then( (dtoList: PermissionDto[]) => {
 
       if(dtoList.length == 0){
@@ -172,7 +171,7 @@ export class PermissionService {
     const inputDto: SearchInputDto = new SearchInputDto(id);
     
     return this.findByParams({}, inputDto)
-    .then( (entityList: Permission[]) => entityList.map( (entity: Permission) => new PermissionDto(entity.label, entity.code, entity.id) ) ) // * map entities to DTOs
+    .then( (entityList: Permission[]) => entityList.map( (entity: Permission) => new PermissionDto(entity.name, entity.code, entity.id) ) ) // * map entities to DTOs
     .then( (dtoList: PermissionDto[]) => {
 
       if(dtoList.length == 0){
@@ -210,9 +209,12 @@ export class PermissionService {
         throw new NotFoundException(msg);
       }
 
-      // * delete
-      return this.permissionRepository.delete(id)
-      .then( () => {
+      // * delete: update field active
+      const entity = entityList[0];
+      entity.active = false;
+
+      return this.save(entity)
+      .then( (entity: Permission) => {
         
         const end = performance.now();
         this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);

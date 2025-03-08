@@ -232,9 +232,13 @@ export class RoleService {
         throw new NotFoundException(msg);
       }
 
-      // * delete
-      return this.roleRepository.delete(id)
-      .then( () => {
+      // * delete: update field active
+      const entity = entityList[0];
+      entity.active = false;
+
+      return this.save(entity)
+      .then( (entity: Role) => {
+
         const end = performance.now();
         this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
         return 'deleted';
@@ -426,7 +430,7 @@ export class RoleService {
     let rolePermissionDtoList: RolePermissionDto[] = [];
 
     if(rolePermissionList.length > 0){
-      rolePermissionDtoList = rolePermissionList.map( (rolePermission: RolePermission) => new RolePermissionDto(rolePermission.permission.id, rolePermission.permission.label) );
+      rolePermissionDtoList = rolePermissionList.map( (rolePermission: RolePermission) => new RolePermissionDto(rolePermission.permission.id, rolePermission.permission.name) );
     } 
 
     // * generate role dto

@@ -6,13 +6,18 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { UserStatusEnum } from './enum/user-status.enum';
+import { UserStatusEnum } from './enums/user-status.enum';
 import { UserDto, UserRoleDto, UserPermissionDto, PermissionDto } from './dto';
 import { User, UserRole, Role, Company } from './entities';
 
 import { CompanyService } from './company.service';
 
+import { DataReplicationDto, MessageDto } from 'src/data-replication/dto/data-replication.dto';
+import { ProcessEnum, SourceEnum } from 'src/data-replication/enums';
+import { DataReplicationService } from 'src/data-replication/data-replication.service';
+
 import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
+import { JsonBasic } from 'src/data-replication/interfaces/json-basic.interface';
 
 @Injectable()
 export class UserService {
@@ -33,7 +38,8 @@ export class UserService {
     @InjectRepository(UserRole, 'adminConn')
     private readonly userRoleRepository: Repository<UserRole>,
 
-    private readonly companyService: CompanyService
+    private readonly companyService: CompanyService,
+    private readonly replicationService: DataReplicationService
     
   ){
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
@@ -95,6 +101,11 @@ export class UserService {
         .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
         .then( (dto: UserDto) => {
 
+          // * replication data
+          const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify(dto));
+          const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
+          this.replicationService.sendMessages(dataReplicationDto);
+
           const end = performance.now();
           this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
           return dto;
@@ -140,6 +151,11 @@ export class UserService {
         return this.updateUserRole(entity, dto.roleList)
         .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
         .then( (dto: UserDto) => {
+
+          // * replication data
+          const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify(dto));
+          const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
+          this.replicationService.sendMessages(dataReplicationDto);
 
           const end = performance.now();
           this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
@@ -215,6 +231,33 @@ export class UserService {
 
   }
 
+  findOneByEmail(email: string): Promise<UserDto[]> {
+    const start = performance.now();
+
+    return this.findByEmail(email)
+    .then( (entityList: User[]) => entityList.map( (entity: User) => this.generateUserWithRoleList(entity, entity.userRole) ) )// * map entities to DTOs
+    .then( (dtoList: UserDto[]) => {
+      
+      if(dtoList.length == 0){
+        const msg = `user not found, email=${email}`;
+        this.logger.warn(`findOneByEmail: ${msg}`);
+        throw new NotFoundException(msg);
+      }
+
+      const end = performance.now();
+      this.logger.log(`findOneByEmail: executed, runtime=${(end - start) / 1000} seconds`);
+      return dtoList;
+    })
+    .catch(error => {
+      if(error instanceof NotFoundException)
+        throw error;
+
+      this.logger.error(`findOneByEmail: error`, error);
+      throw error;
+    })
+
+  }
+
   remove(id: string): Promise<string> {
     this.logger.log(`remove: starting process... id=${id}`);
     const start = performance.now();
@@ -231,13 +274,18 @@ export class UserService {
         throw new NotFoundException(msg);
       }
 
-      // * prepare entity
+      // * delete: update field active
       const entity = entityList[0];
       entity.active = false;
 
-      // * delete: update field active
       return this.save(entity)
-      .then( () => {
+      .then( (entity: User) => {
+
+        // * replication data
+        const jsonBasic: JsonBasic = { id: entity.id }
+        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_DELETE, JSON.stringify(jsonBasic));
+        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
+        this.replicationService.sendMessages(dataReplicationDto);
 
         const end = performance.now();
         this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
@@ -269,29 +317,38 @@ export class UserService {
 
   }
 
-  findOneByEmail(email: string): Promise<UserDto[]> {
-    const start = performance.now();
+  synchronize(companyId: string, paginationDto: SearchPaginationDto): Promise<string> {
+    this.logger.warn(`synchronize: starting process... companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}`);
 
-    return this.findByEmail(email)
-    .then( (entityList: User[]) => entityList.map( (entity: User) => this.generateUserWithRoleList(entity, entity.userRole) ) )// * map entities to DTOs
-    .then( (dtoList: UserDto[]) => {
+    return this.findAll(paginationDto, companyId)
+    .then( (entityList: User[]) => {
       
-      if(dtoList.length == 0){
-        const msg = `user not found, email=${email}`;
-        this.logger.warn(`findOneByEmail: ${msg}`);
-        throw new NotFoundException(msg);
+      if(entityList.length == 0){
+        const msg = 'executed';
+        this.logger.log(`synchronize: ${msg}`);
+        return msg;
       }
 
-      const end = performance.now();
-      this.logger.log(`findOneByEmail: executed, runtime=${(end - start) / 1000} seconds`);
-      return dtoList;
+      const messageDtoList: MessageDto[] = entityList.map( value => {
+        const process = value.active ? ProcessEnum.USER_UPDATE : ProcessEnum.USER_DELETE;
+        const dto = new UserDto(value.company.id, value.name, value.email, value.password, value.id, value.status);
+        delete dto.password;
+        return new MessageDto(SourceEnum.API_ADMIN, process, JSON.stringify(dto));
+      });
+      
+      const dataReplicationDto: DataReplicationDto = new DataReplicationDto(messageDtoList);
+      
+      return this.replicationService.sendMessages(dataReplicationDto)
+      .then( () => {
+        paginationDto.page++;
+        return this.synchronize(companyId, paginationDto);
+      })
+      
     })
-    .catch(error => {
-      if(error instanceof NotFoundException)
-        throw error;
-
-      this.logger.error(`findOneByEmail: error`, error);
-      throw error;
+    .catch( error => {
+      const msg = `not executed (unexpected error)`;
+      this.logger.error(`synchronize: ${msg}, paginationDto=${JSON.stringify(paginationDto)}`, error);
+      return msg;
     })
 
   }
@@ -450,19 +507,6 @@ export class UserService {
     
   }
 
-  private save(entity: User): Promise<User> {
-    const start = performance.now();
-
-    const newEntity: User = this.userRepository.create(entity);
-
-    return this.userRepository.save(newEntity)
-    .then( (entity: User) => {
-      const end = performance.now();
-      this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
-      return entity;
-    })
-  }
-  
   private findByEmail(email: string): Promise<User[]> {
 
     // * search
@@ -474,6 +518,35 @@ export class UserService {
       }
     })
     
+  }
+
+  private findAll(paginationDto: SearchPaginationDto, companyId: string): Promise<User[]> {
+    const {page=1, limit=this.dbDefaultLimit} = paginationDto;
+
+    // * search all
+    return this.userRepository.find({
+      take: limit,
+      skip: (page - 1) * limit,
+      where: {
+        company: { 
+          id: companyId 
+        }
+      }
+    })
+    
+  }
+
+  private save(entity: User): Promise<User> {
+    const start = performance.now();
+
+    const newEntity: User = this.userRepository.create(entity);
+
+    return this.userRepository.save(newEntity)
+    .then( (entity: User) => {
+      const end = performance.now();
+      this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
+      return entity;
+    })
   }
 
   private generateUserWithRoleList(user: User, userRoleList: UserRole[]): UserDto {

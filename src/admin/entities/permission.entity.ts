@@ -7,10 +7,10 @@ export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { length: 45, unique: true })
-  label: string;
+  @Column('varchar', { length: 50, unique: true })
+  name: string;
 
-  @Column('varchar', { length: 45, unique: true })
+  @Column('varchar', { length: 50, unique: true })
   code: string;
 
   @CreateDateColumn({ type: 'timestamp' })

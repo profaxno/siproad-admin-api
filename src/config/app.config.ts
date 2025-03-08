@@ -14,7 +14,7 @@ export const config = () => ({
     awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
     awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     adminSnsTopicArn: process.env.ADMIN_SNS_TOPIC_ARN,
-    productsSnsTopicArn: process.env.PRODUCTS_SNS_TOPIC_ARN,
+    adminSalesSqsUrl: process.env.ADMIN_SALES_SQS_URL,
 
     dbDefaultLimit: +process.env.DB_DEFAULT_LIMIT || 1000
   })

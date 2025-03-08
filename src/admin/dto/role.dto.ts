@@ -11,7 +11,7 @@ export class RoleDto {
   companyId: string;
 
   @IsString()
-  @MaxLength(45)
+  @MaxLength(50)
   name: string;
 
   @IsOptional()
@@ -34,10 +34,10 @@ export class RolePermissionDto {
   
   @IsOptional()
   @IsString()
-  label: string;
+  name: string;
 
-  constructor(id: string, label: string){
+  constructor(id: string, name: string){
     this.id = id;
-    this.label = label;
+    this.name = name;
   }
 }

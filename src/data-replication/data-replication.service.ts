@@ -4,7 +4,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { MessageDto, DataReplicationDto } from './dto/data-replication.dto';
-import { SourceEnum } from './enum';
+import { ProcessEnum, SourceEnum } from './enums';
 
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
@@ -20,7 +20,7 @@ export class DataReplicationService {
   private readonly awsAccessKeyId: string = "";
   private readonly awsSecretAccessKey: string = "";
   private readonly adminSnsTopicArn: string = "";
-  private readonly productsSnsTopicArn: string = "";
+  private readonly adminSalesSqsUrl: string = "";
 
   private readonly snsClient: SNSClient;  
   private readonly sqsClient: SQSClient;
@@ -34,8 +34,8 @@ export class DataReplicationService {
     this.awsAccessKeyId       = this.configService.get('awsAccessKeyId');
     this.awsSecretAccessKey   = this.configService.get('awsSecretAccessKey');
     this.adminSnsTopicArn     = this.configService.get('adminSnsTopicArn');
-    this.productsSnsTopicArn  = this.configService.get('productsSnsTopicArn');
-
+    this.adminSalesSqsUrl     = this.configService.get('adminSalesSqsUrl');
+    
     // * configure SNS client
     const snsConfig = { 
       region: this.awsRegion,
@@ -88,7 +88,11 @@ export class DataReplicationService {
 
   private sendMessage(messageDto: MessageDto): Promise<string> {
     
-    if(messageDto.source == SourceEnum.API_ADMIN){
+    // * sns
+    if(
+      messageDto.process == ProcessEnum.COMPANY_UPDATE ||
+      messageDto.process == ProcessEnum.COMPANY_DELETE
+    ){
       
       const command = new PublishCommand({
         TopicArn: this.adminSnsTopicArn,
@@ -96,6 +100,7 @@ export class DataReplicationService {
       })
   
       this.logger.log(`sendMessage: command=${JSON.stringify(command)}`);
+
       return this.snsClient.send(command)
       .then( (result: any) => {
         return `message sent, messageId=${result.MessageId}`;
@@ -103,22 +108,28 @@ export class DataReplicationService {
 
     }
 
-    // if(messageDto.source == SourceEnum.API_PRODUCTS){
+    // * sqs
+    if(
+      messageDto.process == ProcessEnum.USER_UPDATE ||
+      messageDto.process == ProcessEnum.USER_DELETE 
+    ){
 
-    //   const command = new PublishCommand({
-    //     TopicArn: this.productsSnsTopicArn,
-    //     Message: JSON.stringify(messageDto)
-    //   })
+      const command = new SendMessageCommand({
+        QueueUrl: this.adminSalesSqsUrl,
+        MessageBody: JSON.stringify(messageDto),
+        DelaySeconds: 0
+      });
   
-    //   this.logger.log(`sendMessage: command=${JSON.stringify(command)}`);
-    //   return this.snsClient.send(command)
-    //   .then( (result: any) => {
-    //     return `message sent, messageId=${result.MessageId}`;
-    //   })
+      this.logger.log(`sendMessage: command=${JSON.stringify(command)}`);
+      
+      return this.sqsClient.send(command)
+      .then( (result: any) => {
+        return `message sent, messageId=${result.MessageId}`;
+      })
 
-    // }
+    }
 
-    throw new Error(`source not implement, source=${messageDto.source}`);
+    throw new Error(`process not implement, process=${messageDto.process}`);
 
   }
 

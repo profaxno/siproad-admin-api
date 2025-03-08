@@ -8,9 +8,6 @@ export class RolePermission {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column('boolean', { default: true })
-  active: boolean;
-
   @ManyToOne(
     () => Role,
     (role) => role.rolePermission

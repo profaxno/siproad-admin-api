@@ -7,15 +7,15 @@ export class PermissionDto {
   id?: string;
 
   @IsString()
-  @MaxLength(45)
-  label: string;
+  @MaxLength(50)
+  name: string;
 
   @IsString()
-  @MaxLength(45)
+  @MaxLength(50)
   code: string;
 
-  constructor(label: string, code:string, id?: string) {
-    this.label = label;
+  constructor(name: string, code:string, id?: string) {
+    this.name = name;
     this.code = code;
     this.id = id;
   }

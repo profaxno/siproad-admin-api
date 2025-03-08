@@ -8,13 +8,13 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { length: 90 })
+  @Column('varchar', { length: 50 })
   name: string;
 
-  @Column('varchar', { length: 45, unique: true })
+  @Column('varchar', { length: 50 })
   email: string;
 
-  @Column('varchar', { length: 255 })
+  @Column('varchar', { length: 100 })
   password: string;
 
   @Column('tinyint', { unsigned: true })

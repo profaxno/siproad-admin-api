@@ -10,11 +10,10 @@ import { CompanyDto } from './dto/company.dto';
 import { Company } from './entities/company.entity';
 import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 
-import { ProcessEnum, SourceEnum } from 'src/data-replication/enum';
+import { ProcessEnum, SourceEnum } from 'src/data-replication/enums';
 import { MessageDto, DataReplicationDto } from 'src/data-replication/dto/data-replication.dto';
-import { DataReplicationService } from 'src/data-replication/data-replication.service';
 import { JsonBasic } from 'src/data-replication/interfaces/json-basic.interface';
-
+import { DataReplicationService } from 'src/data-replication/data-replication.service';
 
 @Injectable()
 export class CompanyService {
@@ -78,10 +77,9 @@ export class CompanyService {
         this.logger.warn(`update: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
-
-      let entity = entityList[0];
       
       // * update
+      let entity = entityList[0];
       entity.name = dto.name.toUpperCase();
       
       return this.save(entity)
@@ -315,19 +313,23 @@ export class CompanyService {
   }
 
   synchronize(paginationDto: SearchPaginationDto): Promise<string> {
-    this.logger.warn(`synchronize: processing paginationDto=${JSON.stringify(paginationDto)}`);
+    this.logger.warn(`synchronize: starting process... paginationDto=${JSON.stringify(paginationDto)}`);
 
     return this.findAll(paginationDto)
-    .then( (companyList: Company[]) => {
+    .then( (entityList: Company[]) => {
       
-      if(companyList.length == 0){
-        const msg = `synchronization executed`;
+      if(entityList.length == 0){
+        const msg = 'executed';
         this.logger.log(`synchronize: ${msg}`);
         return msg;
       }
 
-      const companyDtoList = companyList.map( value => new CompanyDto(value.name, value.id) );
-      const messageDtoList: MessageDto[] = companyDtoList.map( value => new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(value)) );
+      const messageDtoList: MessageDto[] = entityList.map( value => {
+        const process = value.active ? ProcessEnum.COMPANY_UPDATE : ProcessEnum.COMPANY_DELETE;
+        const dto = new CompanyDto(value.name, value.id);
+        return new MessageDto(SourceEnum.API_ADMIN, process, JSON.stringify(dto));
+      });
+
       const dataReplicationDto: DataReplicationDto = new DataReplicationDto(messageDtoList);
       
       return this.replicationService.sendMessages(dataReplicationDto)
@@ -368,5 +370,4 @@ export class CompanyService {
     })
     
   }
-
 }
