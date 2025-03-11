@@ -1,4 +1,4 @@
-import { In, InsertResult, Like, Repository } from 'typeorm';
+import { In, InsertResult, Like, Raw, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
@@ -458,9 +458,9 @@ export class UserService {
     // * search by id or partial value
     const value = inputDto.search
     if(value) {
-      const whereById   = { id: value, active: true };
-      const whereByLike = { company: { id: companyId }, email: Like(`%${value}%`), active: true };
-      const where       = isUUID(value) ? whereById : whereByLike;
+      const whereById     = { id: value, active: true };
+      const whereByValue  = { company: { id: companyId }, email: value, active: true };
+      const where = isUUID(value) ? whereById : whereByValue;
 
       return this.userRepository.find({
         take: limit,
@@ -481,8 +481,9 @@ export class UserService {
           company: {
             id: companyId
           },
-          email: In(inputDto.searchList),
-          active: true,
+          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value}%'`).join(' OR ') ),
+          // email: In(inputDto.searchList),
+          active: true
         },
         relations: {
           userRole: true

@@ -89,7 +89,7 @@ export class RoleController {
   }
 
   @Get('/findOneById/:id')
-  findOneById(@Param('id') id: string): Promise<PfxHttpResponseDto> {
+  findOneById(@Param('id', ParseUUIDPipe) id: string): Promise<PfxHttpResponseDto> {
     this.logger.log(`>>> findOneById: id=${id}`);
     const start = performance.now();
 
