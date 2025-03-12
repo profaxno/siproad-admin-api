@@ -5,9 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { config } from './config/app.config';
 
 import { AdminModule } from './admin/admin.module';
-import { DataReplicationModule } from './data-replication/data-replication.module';
 
-// TODO: HACER EL README
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -22,7 +20,7 @@ import { DataReplicationModule } from './data-replication/data-replication.modul
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      synchronize: false, // ! Para produccion esta parametro debe estar en false
+      synchronize: false,
       autoLoadEntities: true
     }),
     AdminModule
