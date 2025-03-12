@@ -27,7 +27,7 @@ Api del sistema siproad que permite gestionar compañias, usuarios, roles y perm
   * Copiar dentro del archivo wslconfig el siguiente contenido:
     ```
     [wsl2]
-    memory=2GB   # Limita a 2GB de RAM
+    memory=4GB   # Limita a 4GB de RAM
     processors=4  # Usa solo 4 núcleos
     swap=2GB      # Agrega 2GB de swap
     ```
