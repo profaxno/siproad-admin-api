@@ -1,22 +1,22 @@
 version: '3'
 
 services:
-  siproad-db:
-    image: mariadb:10.11
-    container_name: ${DOCKER_DB_CONTAINER_NAME}
-    restart: always
-    environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-    ports:
-      - "${DOCKER_DB_PORT}:3306"
-    volumes:
-      - ./${DOCKER_DB_VOLUMEN}:/var/lib/mysql
+  # siproad-db:
+  #   image: mariadb:10.11
+  #   container_name: ${DOCKER_DB_CONTAINER_NAME}
+  #   restart: always
+  #   environment:
+  #     MYSQL_DATABASE: ${DB_NAME}
+  #     MYSQL_USER: ${DB_USERNAME}
+  #     MYSQL_PASSWORD: ${DB_PASSWORD}
+  #     MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+  #   ports:
+  #     - "${DOCKER_DB_PORT}:3306"
+  #   volumes:
+  #     - ./${DOCKER_DB_VOLUMEN}:/var/lib/mysql
   siproad-admin-api:
-    depends_on:
-      - siproad-db
+    # depends_on:
+    #   - siproad-db
     build: 
       context: .
       dockerfile: Dockerfile

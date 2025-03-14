@@ -14,6 +14,7 @@ import { CompanyService } from './company.service';
 import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 import { RolePermission } from './entities/role-permission.entity';
 import { Permission } from './entities/permission.entity';
+import { PermissionService } from './permission.service';
 
 @Injectable()
 export class RoleService {
@@ -28,13 +29,14 @@ export class RoleService {
     @InjectRepository(Role, 'adminConn')
     private readonly roleRepository: Repository<Role>,
 
-    @InjectRepository(Permission, 'adminConn')
-    private readonly permissionRepository: Repository<Permission>,
-
     @InjectRepository(RolePermission, 'adminConn')
     private readonly rolePermissionRepository: Repository<RolePermission>,
 
-    private readonly companyService: CompanyService
+    // @InjectRepository(Permission, 'adminConn')
+    // private readonly permissionRepository: Repository<Permission>,
+
+    private readonly companyService: CompanyService,
+    private readonly permissionService: PermissionService
     
   ){
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
@@ -216,6 +218,35 @@ export class RoleService {
 
   }
 
+  // findByIdList(paginationDto: SearchPaginationDto, idList: string[]): Promise<RoleDto[]> {
+  //   const start = performance.now();
+    
+  //   const inputDto: SearchInputDto = new SearchInputDto(undefined, undefined, idList);
+
+  //   return this.findByParams(paginationDto, inputDto)
+  //   .then( (entityList: Role[]) => entityList.map( (entity: Role) => this.generateRoleWithPermissionList(entity, entity.rolePermission) ) )// * map entities to DTOs
+  //   .then( (dtoList: RoleDto[]) => {
+      
+  //     if(dtoList.length == 0){
+  //       const msg = `roles not found, idList=${JSON.stringify(idList)}`;
+  //       this.logger.warn(`findByIdList: ${msg}`);
+  //       throw new NotFoundException(msg);
+  //     }
+
+  //     const end = performance.now();
+  //     this.logger.log(`findByIdList: executed, runtime=${(end - start) / 1000} seconds`);
+  //     return dtoList;
+  //   })
+  //   .catch(error => {
+  //     if(error instanceof NotFoundException)
+  //       throw error;
+
+  //     this.logger.error(`findByIdList: error`, error);
+  //     throw error;
+  //   })
+
+  // }
+
   remove(id: string): Promise<string> {
     this.logger.log(`remove: starting process... id=${id}`);
     const start = performance.now();
@@ -293,12 +324,11 @@ export class RoleService {
       return Promise.resolve([]);
     }
 
-    // * find roles by id
+    // * find permissions by id
     const permissionIdList = rolePermissionDtoList.map( (item) => item.id );
-
-    return this.permissionRepository.findBy({ // TODO: Posiblemente aca deberia utilizarse el servicio y no el repositorio
-      id: In(permissionIdList),
-    })
+    const inputDto: SearchInputDto = new SearchInputDto(undefined, undefined, permissionIdList);
+    
+    return this.permissionService.findByParams({}, inputDto)
     .then( (permissionList: Permission[]) => {
 
       // * validate
@@ -357,7 +387,7 @@ export class RoleService {
     })
   }
 
-  private findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Role[]> {
+  findByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Role[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by id or partial value
@@ -378,7 +408,7 @@ export class RoleService {
     }
 
     // * search by value list
-    if(inputDto.searchList) {
+    if(inputDto.searchList?.length > 0) {
       return this.roleRepository.find({
         take: limit,
         skip: (page - 1) * limit,
@@ -388,7 +418,22 @@ export class RoleService {
           },
           name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value}%'`).join(' OR ') ),
           // name: In(inputDto.searchList),
-          active: true,
+          active: true
+        },
+        relations: {
+          rolePermission: true
+        }
+      })
+    }
+
+    // * search by id list
+    if(inputDto.idList?.length > 0) {
+      return this.roleRepository.find({
+        take: limit,
+        skip: (page - 1) * limit,
+        where: {
+          id: In(inputDto.idList),
+          active: true
         },
         relations: {
           rolePermission: true
