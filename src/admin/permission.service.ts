@@ -256,7 +256,7 @@ export class PermissionService {
     }
 
     // * search by value list
-    if(inputDto.searchList) {
+    if(inputDto.searchList?.length > 0) {
       return this.permissionRepository.find({
         take: limit,
         skip: (page - 1) * limit,
@@ -265,6 +265,18 @@ export class PermissionService {
           // code: In(inputDto.searchList),
           active: true
         },
+      })
+    }
+
+    // * search by id list
+    if(inputDto.idList?.length > 0) {
+      return this.permissionRepository.find({
+        take: limit,
+        skip: (page - 1) * limit,
+        where: {
+          id: In(inputDto.idList),
+          active: true
+        }
       })
     }
 
