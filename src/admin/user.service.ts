@@ -368,7 +368,8 @@ export class UserService {
         this.logger.warn(`create: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
-        
+
+      // * prepare entity  
       entity.company  = companyList[0];
       entity.name     = dto.name.toUpperCase();
       entity.email    = dto.email.toUpperCase();;
@@ -482,7 +483,7 @@ export class UserService {
           company: {
             id: companyId
           },
-          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value}%'`).join(' OR ') ),
+          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value.replace(' ', '%')}%'`).join(' OR ') ),
           // email: In(inputDto.searchList),
           active: true
         },

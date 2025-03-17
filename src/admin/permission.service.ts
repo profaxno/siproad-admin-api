@@ -261,7 +261,7 @@ export class PermissionService {
         take: limit,
         skip: (page - 1) * limit,
         where: {
-          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value}%'`).join(' OR ') ),
+          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value.replace(' ', '%')}%'`).join(' OR ') ),
           // code: In(inputDto.searchList),
           active: true
         },
