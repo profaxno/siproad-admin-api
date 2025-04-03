@@ -333,7 +333,7 @@ export class UserService {
 
       const messageDtoList: MessageDto[] = entityList.map( value => {
         const process = value.active ? ProcessEnum.USER_UPDATE : ProcessEnum.USER_DELETE;
-        const dto = new UserDto(value.company.id, value.name, value.email, value.password, value.id, value.status);
+        const dto = new UserDto(value.company.id, value.name, value.email, value.password, value.status, value.id);
         delete dto.password;
         return new MessageDto(SourceEnum.API_ADMIN, process, JSON.stringify(dto));
       });
@@ -571,7 +571,7 @@ export class UserService {
     } 
 
     // * generate user dto
-    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.id, user.status, userRoleDtoList, userPermissionDtoList);
+    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.status, user.id, userRoleDtoList, userPermissionDtoList);
 
     return userDto;
   }

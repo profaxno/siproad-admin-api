@@ -17,7 +17,7 @@ export class User {
   @Column('varchar', { length: 100 })
   password: string;
 
-  @Column('tinyint', { unsigned: true })
+  @Column('tinyint', { default: 1, unsigned: true })
   status: number;
 
   @CreateDateColumn({ type: 'timestamp' })

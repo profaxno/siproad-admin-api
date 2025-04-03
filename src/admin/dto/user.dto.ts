@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsArray, IsEmail, IsInt, IsOptional, IsPositive, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator";
+import { IsArray, IsEmail, IsInt, IsOptional, IsPositive, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class UserDto {
   
@@ -23,9 +23,8 @@ export class UserDto {
   password: string;
 
   @IsInt()
-  @IsOptional()
-  @IsPositive()
-  status?: number;
+  @Min(0)
+  status: number;
 
   @IsArray()
   @IsOptional()
@@ -39,13 +38,13 @@ export class UserDto {
   @Type(() => UserPermissionDto)
   permissionList?: UserPermissionDto[];
   
-  constructor(companyId: string, name: string, email: string, password: string, id?: string, status?: number, roleList?: UserRoleDto[], permissionList?: UserPermissionDto[]) {
+  constructor(companyId: string, name: string, email: string, password: string, status: number, id?: string, roleList?: UserRoleDto[], permissionList?: UserPermissionDto[]) {
     this.companyId = companyId;
     this.name = name;
     this.email = email;
     this.password = password;
-    this.id = id;
     this.status = status;
+    this.id = id;
     this.roleList = roleList;
     this.permissionList = permissionList;
   }
