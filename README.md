@@ -19,22 +19,19 @@ Api del sistema siproad que permite gestionar compañias, usuarios, roles y perm
 * Clonar el archivo __.env.template__ y renombrar la copia a ```.env```
 * Configurar los valores de las variables de entornos correspondientes ```.env```
 * Actualizar node_modules ```npm install```
-
-### Configuración de la base de datos (docker)
 * Instalar Docker Desktop.
   * Limitar memoria del wsl utilizado por docker
   * Abrir archivo wsl ```notepad %USERPROFILE%\.wslconfig```
   * Copiar dentro del archivo wslconfig el siguiente contenido:
     ```
     [wsl2]
-    memory=2GB   # Limita a 2GB de RAM
+    memory=4GB   # Limita a 4GB de RAM
     processors=4  # Usa solo 4 núcleos
     swap=2GB      # Agrega 2GB de swap
     ```
   * Reiniciar wsl ```wsl --shutdown```
 * Abrir Docker Desktop.
 * Descargar imagen mariadb.
-* Comentar la creacion de la api en el docker-compose para crear solo la base de datos.
 * Crear contenedor de base de datos y api ```docker-compose -p dev-siproad up -d```
 
 ## Configuración ambiente stg
@@ -42,4 +39,4 @@ Api del sistema siproad que permite gestionar compañias, usuarios, roles y perm
 ### Configuración de la base de datos y api (docker)
 * Apuntar el archivo .env a las variables de staging.
 * Descomentar la creacion de la api en el docker-compose.
-* Crear contenedor de base de datos y api ```docker-compose -p siproad up -d```
+* Crear contenedor de base de datos y api ```docker-compose -p stg-siproad up -d```

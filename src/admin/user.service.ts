@@ -18,6 +18,7 @@ import { DataReplicationService } from 'src/data-replication/data-replication.se
 
 import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 import { JsonBasic } from 'src/data-replication/interfaces/json-basic.interface';
+import { RoleService } from './role.service';
 
 @Injectable()
 export class UserService {
@@ -32,13 +33,14 @@ export class UserService {
     @InjectRepository(User, 'adminConn')
     private readonly userRepository: Repository<User>,
 
-    @InjectRepository(Role, 'adminConn')
-    private readonly roleRepository: Repository<Role>,
-
     @InjectRepository(UserRole, 'adminConn')
     private readonly userRoleRepository: Repository<UserRole>,
 
+    // @InjectRepository(Role, 'adminConn')
+    // private readonly roleRepository: Repository<Role>,
+    
     private readonly companyService: CompanyService,
+    private readonly roleService: RoleService,
     private readonly replicationService: DataReplicationService
     
   ){
@@ -366,7 +368,8 @@ export class UserService {
         this.logger.warn(`create: not executed (${msg})`);
         throw new NotFoundException(msg);
       }
-        
+
+      // * prepare entity  
       entity.company  = companyList[0];
       entity.name     = dto.name.toUpperCase();
       entity.email    = dto.email.toUpperCase();;
@@ -390,10 +393,9 @@ export class UserService {
 
     // * find roles by id
     const roleIdList = userRoleDtoList.map( (item) => item.id );
+    const inputDto: SearchInputDto = new SearchInputDto(undefined, undefined, roleIdList);
 
-    return this.roleRepository.findBy({ // TODO: Posiblemente aca deberia utilizarse el servicio y no el repositorio
-      id: In(roleIdList),
-    })
+    return this.roleService.findByParams({}, inputDto)
     .then( (roleList: Role[]) => {
 
       // * validate
@@ -473,7 +475,7 @@ export class UserService {
     }
 
     // * search by value list
-    if(inputDto.searchList) {
+    if(inputDto.searchList?.length > 0) {
       return this.userRepository.find({
         take: limit,
         skip: (page - 1) * limit,
@@ -481,7 +483,7 @@ export class UserService {
           company: {
             id: companyId
           },
-          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value}%'`).join(' OR ') ),
+          name: Raw( (fieldName) => inputDto.searchList.map(value => `${fieldName} LIKE '%${value.replace(' ', '%')}%'`).join(' OR ') ),
           // email: In(inputDto.searchList),
           active: true
         },

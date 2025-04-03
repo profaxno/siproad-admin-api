@@ -1,0 +1,98 @@
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.3,'036118b9-a27c-44b8-aa48-4087c3ac4f5f','48a96303-f549-43a7-93be-65e2f4fb541b'),
+	 (0.3,'036118b9-a27c-44b8-aa48-4087c3ac4f5f','5bcf6bb8-7a0a-4cf1-a56d-94a1523a369f'),
+	 (0.055,'036118b9-a27c-44b8-aa48-4087c3ac4f5f','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.15,'0ec0e9cf-e39b-4c78-a178-334a29cea1b9','059604e1-4fb0-4ae8-bceb-c280b0e9561c'),
+	 (0.075,'0ec0e9cf-e39b-4c78-a178-334a29cea1b9','4ef1dc2b-0b9e-483b-b88f-acf198501fca'),
+	 (0.125,'0ec0e9cf-e39b-4c78-a178-334a29cea1b9','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.15,'165668d7-cbab-4066-89a1-30a8cb03eacc','322d84de-b40a-4c4d-8231-7cf99777dbba'),
+	 (0.125,'165668d7-cbab-4066-89a1-30a8cb03eacc','4ef1dc2b-0b9e-483b-b88f-acf198501fca'),
+	 (0.25,'165668d7-cbab-4066-89a1-30a8cb03eacc','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.3,'1adccefe-d9d5-4738-9e03-dd2c672e1239','5bcf6bb8-7a0a-4cf1-a56d-94a1523a369f');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.5,'1adccefe-d9d5-4738-9e03-dd2c672e1239','7e82ee10-2936-49a5-80df-f5e11880ca37'),
+	 (0.055,'1adccefe-d9d5-4738-9e03-dd2c672e1239','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.5,'22f7ca04-6a88-46ae-bef6-8f6ca5fb7b56','4777adcc-514b-42e1-9af1-674f836513b2'),
+	 (1.0,'36ec1dfe-2d98-405d-84ed-f08af1732bdb','5d8bd31a-37f4-495f-8edf-93470dcedfaf'),
+	 (0.3,'376470ee-5122-4209-b1d6-c91ead84cc78','48a96303-f549-43a7-93be-65e2f4fb541b'),
+	 (0.3,'376470ee-5122-4209-b1d6-c91ead84cc78','5bcf6bb8-7a0a-4cf1-a56d-94a1523a369f'),
+	 (0.055,'376470ee-5122-4209-b1d6-c91ead84cc78','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (1.0,'3ccbdfa4-2b28-441d-a374-3c9005cea522','525b2ab0-f857-4f2b-94d0-24caf16b8b29'),
+	 (1.0,'3ccbdfa4-2b28-441d-a374-3c9005cea522','61ea846d-a827-4f89-aed3-7c606501c52e'),
+	 (1.0,'3ccbdfa4-2b28-441d-a374-3c9005cea522','8b25e58c-760b-4c3c-baab-dd5152b7c1c7');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.3,'3d1d49f6-6657-4f6a-a232-fa9ba09e8879','5bcf6bb8-7a0a-4cf1-a56d-94a1523a369f'),
+	 (0.5,'3d1d49f6-6657-4f6a-a232-fa9ba09e8879','7e82ee10-2936-49a5-80df-f5e11880ca37'),
+	 (0.055,'3d1d49f6-6657-4f6a-a232-fa9ba09e8879','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.15,'46f006b9-1b92-4168-a2a3-400f51ed1f96','059604e1-4fb0-4ae8-bceb-c280b0e9561c'),
+	 (0.075,'46f006b9-1b92-4168-a2a3-400f51ed1f96','4ef1dc2b-0b9e-483b-b88f-acf198501fca'),
+	 (0.125,'46f006b9-1b92-4168-a2a3-400f51ed1f96','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.1,'4b5622a4-1700-458b-80fd-89c2365bde60','1f001516-05e2-4c71-b745-9312a5a2a2e8'),
+	 (0.2,'4b5622a4-1700-458b-80fd-89c2365bde60','c28c9dfe-9b0c-4f5b-ab2a-4b07ca476bdd'),
+	 (0.1,'4b5622a4-1700-458b-80fd-89c2365bde60','e188d0b1-dfeb-46ec-9bc8-31a86ff50034'),
+	 (0.25,'4c198edc-754c-4de3-9488-0cd08428508e','322d84de-b40a-4c4d-8231-7cf99777dbba');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.25,'4c198edc-754c-4de3-9488-0cd08428508e','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.25,'4feee95c-bb87-4733-ba47-7a3f2b64192a','3491444f-70e7-426a-9436-1d09b890a85b'),
+	 (0.1,'4feee95c-bb87-4733-ba47-7a3f2b64192a','7d9f7bff-6191-419d-8f9f-f5975f5edea9'),
+	 (0.1,'4feee95c-bb87-4733-ba47-7a3f2b64192a','e188d0b1-dfeb-46ec-9bc8-31a86ff50034'),
+	 (0.05,'5bec6f4e-1871-4ae5-a10e-175656132b34','322d84de-b40a-4c4d-8231-7cf99777dbba'),
+	 (0.25,'5bec6f4e-1871-4ae5-a10e-175656132b34','3491444f-70e7-426a-9436-1d09b890a85b'),
+	 (1.0,'5bec6f4e-1871-4ae5-a10e-175656132b34','84dc0925-38c8-4207-81bd-640bfcabce15'),
+	 (1.0,'6aa1a0cf-ef55-42db-9b57-34a976c786e3','ef3803a5-7357-4659-9053-40da56e45ce4'),
+	 (0.2,'6b87083f-6b47-4a4d-9401-1385d87da02e','3491444f-70e7-426a-9436-1d09b890a85b'),
+	 (0.001,'6b87083f-6b47-4a4d-9401-1385d87da02e','e076115a-cebf-4153-82bb-1180b5a7af33');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (1.0,'761cfeac-428a-49ad-8ca3-8ba1dd522302','e2652266-41fc-4251-9461-6f8e8741699f'),
+	 (0.1,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','0c3270f1-e5a9-427a-9b4a-a6605274c373'),
+	 (0.15,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','46026adc-15c8-4e0c-a7ef-d29892b9c8dd'),
+	 (0.003,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','7af89571-6e5a-4ae3-9357-07d9d6e2f3bc'),
+	 (0.09,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','aa73d608-9461-4782-b63c-445edf9e6db1'),
+	 (0.005,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','af07395c-9584-40ad-a027-f73b5fcdbf9a'),
+	 (2.0,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','c699b539-4f1b-4aa6-b5c4-395ec766736c'),
+	 (0.06,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','cdac3091-7f68-449a-a431-6c28155cabea'),
+	 (0.003,'7abdc538-95bd-4119-9cb7-dfaeec0c5537','d7a691f9-ddac-4165-9391-003b9a882d47'),
+	 (0.25,'7dd58f3c-486a-4cd9-8c46-de905bc6cec9','322d84de-b40a-4c4d-8231-7cf99777dbba');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.25,'7dd58f3c-486a-4cd9-8c46-de905bc6cec9','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.1,'7f76149e-3e77-4e90-898f-51fb604fab5c','0c3270f1-e5a9-427a-9b4a-a6605274c373'),
+	 (0.15,'7f76149e-3e77-4e90-898f-51fb604fab5c','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (3.0,'7f76149e-3e77-4e90-898f-51fb604fab5c','c699b539-4f1b-4aa6-b5c4-395ec766736c'),
+	 (0.1,'8ea0b371-909d-482d-850c-de3be3431d64','1f001516-05e2-4c71-b745-9312a5a2a2e8'),
+	 (0.25,'8ea0b371-909d-482d-850c-de3be3431d64','5bcf6bb8-7a0a-4cf1-a56d-94a1523a369f'),
+	 (0.025,'8ea0b371-909d-482d-850c-de3be3431d64','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.1,'9844ba0c-d97c-4c37-b0e8-6cd283be85d8','0c3270f1-e5a9-427a-9b4a-a6605274c373'),
+	 (0.15,'9844ba0c-d97c-4c37-b0e8-6cd283be85d8','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (3.0,'9844ba0c-d97c-4c37-b0e8-6cd283be85d8','c699b539-4f1b-4aa6-b5c4-395ec766736c');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.1,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','0c3270f1-e5a9-427a-9b4a-a6605274c373'),
+	 (0.105,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','46026adc-15c8-4e0c-a7ef-d29892b9c8dd'),
+	 (0.003,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','7af89571-6e5a-4ae3-9357-07d9d6e2f3bc'),
+	 (0.045,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','94fab74d-fba9-43bf-b346-2d65ee5d68a2'),
+	 (0.09,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','aa73d608-9461-4782-b63c-445edf9e6db1'),
+	 (0.005,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','af07395c-9584-40ad-a027-f73b5fcdbf9a'),
+	 (2.0,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','c699b539-4f1b-4aa6-b5c4-395ec766736c'),
+	 (0.06,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','cdac3091-7f68-449a-a431-6c28155cabea'),
+	 (0.003,'9af913bf-eee1-4e8c-bda5-c8b5ab8c353f','d7a691f9-ddac-4165-9391-003b9a882d47'),
+	 (0.1,'c559916e-92fd-4990-ab0b-e7fd6d5a606e','1f001516-05e2-4c71-b745-9312a5a2a2e8');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.2,'c559916e-92fd-4990-ab0b-e7fd6d5a606e','c28c9dfe-9b0c-4f5b-ab2a-4b07ca476bdd'),
+	 (0.1,'c559916e-92fd-4990-ab0b-e7fd6d5a606e','e188d0b1-dfeb-46ec-9bc8-31a86ff50034'),
+	 (1.0,'c8cc2440-afea-4233-a88d-b438d8f081cc','3d1a1724-bc9d-4751-92e4-0a3048ab12d4'),
+	 (1.0,'c8cc2440-afea-4233-a88d-b438d8f081cc','61ea846d-a827-4f89-aed3-7c606501c52e'),
+	 (1.0,'c8cc2440-afea-4233-a88d-b438d8f081cc','7263400a-5491-404e-bf4a-216133090d58'),
+	 (0.15,'dc50dc97-8b20-413f-bbce-e8488d03f3d3','322d84de-b40a-4c4d-8231-7cf99777dbba'),
+	 (0.125,'dc50dc97-8b20-413f-bbce-e8488d03f3d3','4ef1dc2b-0b9e-483b-b88f-acf198501fca'),
+	 (0.25,'dc50dc97-8b20-413f-bbce-e8488d03f3d3','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.1,'ec776e5a-e148-455e-b070-93a8f087317a','1f001516-05e2-4c71-b745-9312a5a2a2e8'),
+	 (0.25,'ec776e5a-e148-455e-b070-93a8f087317a','5bcf6bb8-7a0a-4cf1-a56d-94a1523a369f');
+INSERT INTO siproad_products_db.pro_product_element (qty,productId,elementId) VALUES
+	 (0.025,'ec776e5a-e148-455e-b070-93a8f087317a','b5fa5fa0-f286-42f9-8abc-cebe21d6685a'),
+	 (0.1,'fcada987-1d4e-4336-b16f-4e821c9a11fe','2536c271-bf9f-41ac-9feb-4aee0ba0064b'),
+	 (0.2,'fcada987-1d4e-4336-b16f-4e821c9a11fe','3491444f-70e7-426a-9436-1d09b890a85b'),
+	 (0.25,'fcada987-1d4e-4336-b16f-4e821c9a11fe','aabf116f-9d91-40fa-9ce4-1286c2556177'),
+	 (0.2,'04ed6c13-7591-4e93-9ee3-423dc6fa71cd','3491444f-70e7-426a-9436-1d09b890a85b'),
+	 (0.05,'04ed6c13-7591-4e93-9ee3-423dc6fa71cd','94fab74d-fba9-43bf-b346-2d65ee5d68a2'),
+	 (0.001,'04ed6c13-7591-4e93-9ee3-423dc6fa71cd','e076115a-cebf-4153-82bb-1180b5a7af33'),
+	 (0.25,'2f59aa86-716c-4536-8fd1-f9c2e36a0a07','3491444f-70e7-426a-9436-1d09b890a85b'),
+	 (0.3,'2f59aa86-716c-4536-8fd1-f9c2e36a0a07','e188d0b1-dfeb-46ec-9bc8-31a86ff50034');
