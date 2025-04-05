@@ -11,7 +11,7 @@ export const config = () => ({
     dbDefaultLimit: +process.env.DB_DEFAULT_LIMIT || 1000,
 
     queueType: process.env.QUEUE_TYPE,
-    
+
     useLocalStack: +process.env.USE_LOCAL_STACK,
     awsHost: process.env.AWS_HOST,
     awsRegion: process.env.AWS_REGION,
@@ -20,7 +20,11 @@ export const config = () => ({
     adminSnsTopicArn: process.env.ADMIN_SNS_TOPIC_ARN,
     adminSalesSqsUrl: process.env.ADMIN_SALES_SQS_URL,
 
+    redisHost: process.env.REDIS_HOST,
+    redisPort: +process.env.REDIS_PORT || 6379,
+    redisPassword: process.env.REDIS_PASSWORD,
+    redisFamily: +process.env.REDIS_FAMILY,
     redisJobQueueAdminProducts: process.env.REDIS_JOB_QUEUE_ADMIN_PRODUCTS,
     redisJobQueueAdminSales: process.env.REDIS_JOB_QUEUE_ADMIN_SALES
-
+    
   })
