@@ -16,7 +16,7 @@ import { PermissionService } from './permission.service';
 
 import { Company, User, UserRole, Role, RolePermission, Permission } from './entities'
 
-import { DataReplicationModule } from 'src/data-replication/data-replication.module';
+import { DataReplicationModule } from 'src/data-transfer/data-replication/data-replication.module';
 
 @Module({
   imports: [
