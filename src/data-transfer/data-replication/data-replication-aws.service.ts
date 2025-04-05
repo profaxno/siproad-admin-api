@@ -3,16 +3,16 @@ import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxno
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { MessageDto, DataReplicationDto } from './dto/data-replication.dto';
-import { ProcessEnum, SourceEnum } from './enums';
+import { MessageDto } from '../dto/message.dto';
+import { ProcessEnum, SourceEnum } from '../enums';
 
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 @Injectable()
-export class DataReplicationService {
+export class DataReplicationAwsService {
 
-  private readonly logger = new Logger(DataReplicationService.name);
+  private readonly logger = new Logger(DataReplicationAwsService.name);
   
   private readonly useLocalStack: boolean = false;
   private readonly awsHost: string = "";
@@ -53,40 +53,8 @@ export class DataReplicationService {
     // * configure SQS client
     this.sqsClient = new SQSClient({ region: this.awsRegion});
   }
-  
-  async sendMessages(dataReplicationDto: DataReplicationDto): Promise<ProcessSummaryDto> {
-    this.logger.log(`sendMessages: process start...`);
-    const start = performance.now();
 
-    let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(dataReplicationDto.messageList.length);
-
-    if (processSummaryDto.totalRows === 0)
-      return processSummaryDto; 
-
-    // * process messages
-    let rowProcessed = 0;
-    for (const messageDto of dataReplicationDto.messageList) {
-      
-      await this.sendMessage(messageDto)
-      .then( (result: string) => {
-        processSummaryDto.rowsOK++;
-        processSummaryDto.detailsRowsOK.push(`row=${rowProcessed}, response=${result}`);
-      })
-      .catch(err => {
-        processSummaryDto.rowsKO++;
-        processSummaryDto.detailsRowsKO.push(`row=${rowProcessed}, error=${err}`);
-      })
-      .finally( () => {
-        rowProcessed++;
-      });
-    }
-
-    const end = performance.now();
-    this.logger.log(`sendMessages: executed, executionTime=${(end - start) / 1000} seconds, summary=${JSON.stringify(processSummaryDto)}`);
-    return processSummaryDto;
-  }
-
-  private sendMessage(messageDto: MessageDto): Promise<string> {
+  sendMessage(messageDto: MessageDto): Promise<string> {
     
     // * sns
     if(

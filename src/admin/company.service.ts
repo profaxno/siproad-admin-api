@@ -8,12 +8,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { CompanyDto } from './dto/company.dto';
 import { Company } from './entities/company.entity';
+
 import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
 
-import { ProcessEnum, SourceEnum } from 'src/data-replication/enums';
-import { MessageDto, DataReplicationDto } from 'src/data-replication/dto/data-replication.dto';
-import { JsonBasic } from 'src/data-replication/interfaces/json-basic.interface';
-import { DataReplicationService } from 'src/data-replication/data-replication.service';
+import { DataReplicationService } from 'src/data-transfer/data-replication/data-replication.service';
+import { MessageDto } from 'src/data-transfer/dto/message.dto';
+import { ProcessEnum, SourceEnum } from 'src/data-transfer/enums';
+import { JsonBasic } from 'src/data-transfer/interfaces/json-basic.interface';
 
 @Injectable()
 export class CompanyService {
@@ -88,8 +89,7 @@ export class CompanyService {
 
         // * replication data
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));
-        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
-        this.replicationService.sendMessages(dataReplicationDto);
+        this.replicationService.sendMessages([messageDto]);
 
         const end = performance.now();
         this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
@@ -134,8 +134,7 @@ export class CompanyService {
 
         // * replication data
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));
-        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
-        this.replicationService.sendMessages(dataReplicationDto);
+        this.replicationService.sendMessages([messageDto]);
 
         const end = performance.now();
         this.logger.log(`create: OK, runtime=${(end - start) / 1000} seconds`);
@@ -234,8 +233,7 @@ export class CompanyService {
         // * replication data
         const jsonBasic: JsonBasic = { id: entity.id }
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(jsonBasic));
-        const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
-        this.replicationService.sendMessages(dataReplicationDto);
+        this.replicationService.sendMessages([messageDto]);
 
         const end = performance.now();
         this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
@@ -331,9 +329,7 @@ export class CompanyService {
         return new MessageDto(SourceEnum.API_ADMIN, process, JSON.stringify(dto));
       });
 
-      const dataReplicationDto: DataReplicationDto = new DataReplicationDto(messageDtoList);
-      
-      return this.replicationService.sendMessages(dataReplicationDto)
+      return this.replicationService.sendMessages(messageDtoList)
       .then( () => {
         paginationDto.page++;
         return this.synchronize(paginationDto);
