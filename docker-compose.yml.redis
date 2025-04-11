@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7
+    container_name: ${DOCKER_REDIS_CONTAINER_NAME}
+    ports:
+      - "${DOCKER_REDIS_PORT}:6379"
+    volumes:
+      - ./${DOCKER_REDIS_VOLUMEN}:/data
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "siproad123."]
+
+volumes:
+  redis_data:
