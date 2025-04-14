@@ -10,6 +10,15 @@ export class Company {
   @Column('varchar', { length: 50, unique: true })
   name: string;
 
+  @Column('varchar', { length: 500 })
+  imgUrlHeader: string;
+  
+  @Column('varchar', { length: 500 })
+  imgUrlFooter: string;
+  
+  @Column('varchar', { length: 500 })
+  imgUrlTransferData: string;
+  
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 

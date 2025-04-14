@@ -3,8 +3,8 @@ import { IsArray, IsEmail, IsInt, IsOptional, IsPositive, IsString, IsUUID, MaxL
 
 export class UserDto {
   
-  @IsUUID()
   @IsOptional()
+  @IsUUID()
   id?: string;
 
   @IsUUID()
@@ -26,19 +26,21 @@ export class UserDto {
   @Min(0)
   status: number;
 
-  @IsArray()
   @IsOptional()
+  @IsArray()
   @ValidateNested({ each: true })
   @Type(() => UserRoleDto)
   roleList?: UserRoleDto[];
 
-  @IsArray()
-  @IsOptional()
-  @ValidateNested({ each: true })
-  @Type(() => UserPermissionDto)
+  // @IsOptional()
+  // @IsArray()
+  // @ValidateNested({ each: true })
+  // @Type(() => UserPermissionDto)
   permissionList?: UserPermissionDto[];
   
-  constructor(companyId: string, name: string, email: string, password: string, status: number, id?: string, roleList?: UserRoleDto[], permissionList?: UserPermissionDto[]) {
+  company: UserCompanyDto;
+
+  constructor(companyId: string, name: string, email: string, password: string, status: number, id?: string, roleList?: UserRoleDto[], permissionList?: UserPermissionDto[], company?: UserCompanyDto ) {
     this.companyId = companyId;
     this.name = name;
     this.email = email;
@@ -47,7 +49,19 @@ export class UserDto {
     this.id = id;
     this.roleList = roleList;
     this.permissionList = permissionList;
+    this.company = company;
   }
+}
+
+export class UserCompanyDto {
+  name: string;
+  images: any[];
+  
+  constructor(name: string, images: any[]) {
+    this.name = name;
+    this.images = images;
+  }
+
 }
 
 export class UserRoleDto {
@@ -66,11 +80,11 @@ export class UserRoleDto {
 }
 
 export class UserPermissionDto {
-  @IsUUID()
+  // @IsUUID()
   id: string;
 
-  @IsString()
-  @MaxLength(50)
+  // @IsString()
+  // @MaxLength(50)
   code: string
   
   constructor(id: string, code: string){

@@ -10,8 +10,20 @@ export class CompanyDto {
   @MaxLength(50)
   name: string;
 
-  constructor(name: string, id?: string) {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imgUrlHeader?: string;
+  
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imgUrlFooter?: string;
+
+  constructor(name: string, id?: string, imgUrlHeader?: string, imgUrlFooter?: string) {
     this.name = name;
     this.id = id;
+    this.imgUrlHeader = imgUrlHeader;
+    this.imgUrlFooter = imgUrlFooter;
   }
 }
