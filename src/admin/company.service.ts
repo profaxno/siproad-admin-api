@@ -82,10 +82,11 @@ export class CompanyService {
       // * update
       let entity = entityList[0];
       entity.name = dto.name.toUpperCase();
-      
+      //TODO: crear metodo prepare entity y añadir imgUrlHeader y imgUrlFooter
+
       return this.save(entity)
       .then( (entity: Company) => {
-        dto = new CompanyDto(entity.name, entity.id); // * map to dto
+        dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter); // * map to dto
 
         // * replication data
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));
@@ -130,7 +131,7 @@ export class CompanyService {
       
       return this.save(entity)
       .then( (entity: Company) => {
-        dto = new CompanyDto(entity.name, entity.id); // * map to dto
+        dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter); // * map to dto
 
         // * replication data
         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(dto));

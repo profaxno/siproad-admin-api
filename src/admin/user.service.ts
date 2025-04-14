@@ -19,6 +19,7 @@ import { DataReplicationService } from 'src/data-transfer/data-replication/data-
 import { MessageDto } from 'src/data-transfer/dto/message.dto';
 import { ProcessEnum, SourceEnum } from 'src/data-transfer/enums';
 import { JsonBasic } from 'src/data-transfer/interfaces/json-basic.interface';
+import { UserCompanyDto } from './dto/user.dto';
 
 @Injectable()
 export class UserService {
@@ -566,7 +567,17 @@ export class UserService {
     } 
 
     // * generate user dto
-    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.status, user.id, userRoleDtoList, userPermissionDtoList);
+    
+    // TODO: crear tabla de imagenes y asociarla a la tabla de compañias
+    const images: any[] = [
+      { name: 'header'      , image: user.company.imgUrlHeader },
+      { name: 'footer'      , image: user.company.imgUrlFooter },
+      { name: 'transferData', image: user.company.imgUrlTransferData },
+    ];
+
+    const company: UserCompanyDto = { name: user.company.name, images };
+
+    const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.status, user.id, userRoleDtoList, userPermissionDtoList, company);
 
     return userDto;
   }
