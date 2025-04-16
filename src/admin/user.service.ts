@@ -570,6 +570,7 @@ export class UserService {
     
     // TODO: crear tabla de imagenes y asociarla a la tabla de compañias
     const images: any[] = [
+      { name: 'logo'        , image: user.company.imgUrlLogo },
       { name: 'header'      , image: user.company.imgUrlHeader },
       { name: 'footer'      , image: user.company.imgUrlFooter },
       { name: 'transferData', image: user.company.imgUrlTransferData },
