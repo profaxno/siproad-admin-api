@@ -11,6 +11,9 @@ export class Company {
   name: string;
 
   @Column('varchar', { length: 500 })
+  imgUrlLogo: string;
+  
+  @Column('varchar', { length: 500 })
   imgUrlHeader: string;
   
   @Column('varchar', { length: 500 })
