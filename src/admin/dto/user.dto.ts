@@ -40,7 +40,7 @@ export class UserDto {
   
   company: UserCompanyDto;
 
-  constructor(companyId: string, name: string, email: string, password: string, status: number, id?: string, roleList?: UserRoleDto[], permissionList?: UserPermissionDto[], company?: UserCompanyDto ) {
+  constructor(companyId: string, name: string, email: string, password: string, status: number, id?: string, roleList?: UserRoleDto[], permissionList?: UserPermissionDto[], company?: UserCompanyDto) {
     this.companyId = companyId;
     this.name = name;
     this.email = email;
@@ -51,17 +51,6 @@ export class UserDto {
     this.permissionList = permissionList;
     this.company = company;
   }
-}
-
-export class UserCompanyDto {
-  name: string;
-  images: any[];
-  
-  constructor(name: string, images: any[]) {
-    this.name = name;
-    this.images = images;
-  }
-
 }
 
 export class UserRoleDto {
@@ -90,5 +79,40 @@ export class UserPermissionDto {
   constructor(id: string, code: string){
     this.id = id;
     this.code = code;
+  }
+}
+
+export class UserCompanyDto {
+  name      : string;
+  fantasyName: string;
+  idDoc?    : string;
+  address?  : string;
+  email?    : string;
+  phone?    : string;
+  bank? : bankDto;
+  images?   : any[];
+  
+  constructor(name: string, fantasyName?: string, idDoc?: string, address?: string, email?: string, phone?: string, bank?: bankDto, images?: any[]){
+    this.name = name;
+    this.fantasyName = fantasyName;
+    this.idDoc = idDoc;
+    this.address = address;
+    this.email = email;
+    this.phone = phone;
+    this.bank = bank;
+    this.images = images;
+  }
+
+}
+
+export class bankDto {
+  name: string;
+  accountType: string;
+  accountNumber: string;
+  
+  constructor(name: string, accountType: string, accountNumber: string){
+    this.name = name;
+    this.accountType = accountType;
+    this.accountNumber = accountNumber;
   }
 }

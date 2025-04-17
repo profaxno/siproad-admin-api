@@ -19,7 +19,9 @@ import { DataReplicationService } from 'src/data-transfer/data-replication/data-
 import { MessageDto } from 'src/data-transfer/dto/message.dto';
 import { ProcessEnum, SourceEnum } from 'src/data-transfer/enums';
 import { JsonBasic } from 'src/data-transfer/interfaces/json-basic.interface';
-import { UserCompanyDto } from './dto/user.dto';
+import { bankDto, UserCompanyDto } from './dto/user.dto';
+import e from 'express';
+import { emit } from 'process';
 
 @Injectable()
 export class UserService {
@@ -576,7 +578,9 @@ export class UserService {
       { name: 'transferData', image: user.company.imgUrlTransferData },
     ];
 
-    const company: UserCompanyDto = { name: user.company.name, images };
+    const bank: bankDto = new bankDto(user.company.bankName, user.company.bankAccountType, user.company.bankAccountNumber);
+
+    const company: UserCompanyDto = new UserCompanyDto(user.company.name, user.company.fantasyName, user.company.idDoc, user.company.address, user.company.email, user.company.phone, bank, images); 
 
     const userDto = new UserDto(user.company.id, user.name, user.email, user.password, user.status, user.id, userRoleDtoList, userPermissionDtoList, company);
 

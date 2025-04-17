@@ -10,6 +10,30 @@ export class Company {
   @Column('varchar', { length: 50, unique: true })
   name: string;
 
+  @Column('varchar', { length: 100 })
+  fantasyName: string;
+
+  @Column('varchar', { length: 50 })
+  idDoc: string;
+
+  @Column('varchar', { length: 150 })
+  address: string;
+
+  @Column('varchar', { length: 50 })
+  email: string;
+
+  @Column('varchar', { length: 50 })
+  phone: string;
+
+  @Column('varchar', { length: 50 })
+  bankName: string;
+
+  @Column('varchar', { length: 50 })
+  bankAccountType: string;
+
+  @Column('varchar', { length: 100 })
+  bankAccountNumber: string;
+
   @Column('varchar', { length: 500 })
   imgUrlLogo: string;
   
