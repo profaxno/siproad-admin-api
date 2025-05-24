@@ -15,10 +15,10 @@ export class DataReplicationRedisProducerService {
   private readonly redisPort: number = 0;
   private readonly redisPassword: string = "";
   private readonly redisFamily: number = 0;
-  private readonly redisJobQueueAdminProducts: string = "";
+  private readonly redisJobQueueAdminInventory: string = "";
   private readonly redisJobQueueAdminSales: string = "";
 
-  private queueAdminProducts: Queue;
+  private queueAdminInventory: Queue;
   private queueAdminSales: Queue;
 
   constructor(
@@ -29,7 +29,7 @@ export class DataReplicationRedisProducerService {
     this.redisPort = this.configService.get('redisPort');
     this.redisPassword = this.configService.get('redisPassword');
     this.redisFamily = this.configService.get('redisFamily');
-    this.redisJobQueueAdminProducts = this.configService.get('redisJobQueueAdminProducts');
+    this.redisJobQueueAdminInventory = this.configService.get('redisJobQueueAdminInventory');
     this.redisJobQueueAdminSales = this.configService.get('redisJobQueueAdminSales');
 
     // * Create the Redis client using ioredis
@@ -41,7 +41,7 @@ export class DataReplicationRedisProducerService {
     });
 
     // * Configure the BullMQ queue with the redisClient
-    this.queueAdminProducts = new Queue(this.redisJobQueueAdminProducts, {
+    this.queueAdminInventory = new Queue(this.redisJobQueueAdminInventory, {
       connection: redisClient,
     });
 
@@ -54,9 +54,9 @@ export class DataReplicationRedisProducerService {
   // * Method to send a message to the queue
   sendMessage(messageDto: MessageDto): Promise<string> {
     
-    return this.queueAdminProducts.add('job', messageDto)
+    return this.queueAdminInventory.add('job', messageDto)
     .then((job) => {
-      this.logger.log(`sendMessage: job generated to queueAdminProducts, jobId=${job.id}`)
+      this.logger.log(`sendMessage: job generated to queueAdminInventory, jobId=${job.id}`)
 
       return this.queueAdminSales.add('job', messageDto)
       .then((job) => {
@@ -71,21 +71,5 @@ export class DataReplicationRedisProducerService {
       throw error;
     });
 
-
-    // this.queueAdminProducts.add('job', messageDto)
-    // .then((job) => {
-    //   this.logger.log(`sendMessage: job generated to queueAdminProducts, jobId=${job.id}`)
-    // })
-    // .catch((error) => {
-    //   this.logger.error(`sendMessage: queueAdminProducts error=${JSON.stringify(error)}`);
-    // });
-
-    // this.queueAdminSales.add('job', messageDto)
-    // .then((job) => {
-    //   this.logger.log(`sendMessage: job generated to queueAdminSales, jobId=${job.id}`)
-    // })
-    // .catch((error) => {
-    //   this.logger.error(`sendMessage: queueAdminSales error=${JSON.stringify(error)}`);
-    // });
   }
 }
