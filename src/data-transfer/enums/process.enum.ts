@@ -6,5 +6,8 @@ export enum ProcessEnum {
     PRODUCT_UPDATE  = 'productUpdate',
     PRODUCT_DELETE  = 'productDelete',
     DOCUMENT_TYPE_UPDATE = 'documentTypeUpdate',
-    DOCUMENT_TYPE_DELETE = 'documentTypeDelete'
+    DOCUMENT_TYPE_DELETE = 'documentTypeDelete',
+    PRODUCT_UNIT_UPDATE = 'productUnitUpdate',
+    PRODUCT_UNIT_DELETE = 'productUnitDelete'
+
 }

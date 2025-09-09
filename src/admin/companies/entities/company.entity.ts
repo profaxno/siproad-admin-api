@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { User } from "src/admin/users/entities/user.entity";
-import { DocumentType } from "src/admin/documentTypes/entities/document-type.entity";
+import { DocumentType } from "src/admin/settings/documentTypes/entities/document-type.entity";
 
 @Entity("adm_company")
 export class Company {

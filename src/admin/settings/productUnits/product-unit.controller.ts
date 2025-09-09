@@ -3,28 +3,28 @@ import { SearchPaginationDto } from 'profaxnojs/util';
 
 import { Controller, Get, Body, Patch, Param, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
 
-import { DocumentTypeDto, DocumentTypeSearchInputDto } from './dto';
-import { DocumentTypeService } from './document-type.service';
+import { ProductUnitDto, ProductUnitSearchInputDto } from './dto';
+import { ProductUnitService } from './product-unit.service';
 
-import { AlreadyExistException } from '../../common/exceptions/common.exception';
+import { AlreadyExistException } from '../../../common/exceptions/common.exception';
 
-@Controller('document-types')
-export class DocumentTypeController {
+@Controller('setting-product-units')
+export class ProductUnitController {
 
-  private readonly logger = new Logger(DocumentTypeController.name);
+  private readonly logger = new Logger(ProductUnitController.name);
 
   constructor(
-    private readonly documentTypeService: DocumentTypeService
+    private readonly documentTypeService: ProductUnitService
   ) {}
 
   @Patch('/update')
   @HttpCode(HttpStatus.OK)
-  update(@Body() dto: DocumentTypeDto): Promise<PfxHttpResponseDto> {
+  update(@Body() dto: ProductUnitDto): Promise<PfxHttpResponseDto> {
     this.logger.log(`>>> update: dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     return this.documentTypeService.update(dto)
-    .then( (dto: DocumentTypeDto) => {
+    .then( (dto: ProductUnitDto) => {
       const response = new PfxHttpResponseDto(HttpStatus.OK, 'executed', 1, [dto]);
       const end = performance.now();
       this.logger.log(`<<< update: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
@@ -46,14 +46,14 @@ export class DocumentTypeController {
   searchByValues(
     @Param('companyId', ParseUUIDPipe) companyId: string,
     @Query() paginationDto: SearchPaginationDto,
-    @Body() inputDto: DocumentTypeSearchInputDto
+    @Body() inputDto: ProductUnitSearchInputDto
   ): Promise<PfxHttpResponseDto> {
 
     this.logger.log(`>>> searchByValues: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
     const start = performance.now();
     
     return this.documentTypeService.searchByValues(companyId, paginationDto, inputDto)
-    .then( (dtoList: DocumentTypeDto[]) => {
+    .then( (dtoList: ProductUnitDto[]) => {
       const response = new PfxHttpResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< searchByValues: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);

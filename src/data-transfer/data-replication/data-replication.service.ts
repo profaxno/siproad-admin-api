@@ -29,38 +29,38 @@ export class DataReplicationService {
     this.queueType = this.configService.get('queueType') == 'AWS' ? QueueTypeEnum.AWS : QueueTypeEnum.REDIS;
   }
   
-  async sendMessages(messageDtoList: MessageDto[]): Promise<ProcessSummaryDto> {
-    this.logger.log(`sendMessages: process start...`);
-    const start = performance.now();
+  // async sendMessages(messageDtoList: MessageDto[]): Promise<ProcessSummaryDto> {
+  //   this.logger.log(`sendMessages: process start...`);
+  //   const start = performance.now();
 
-    let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(messageDtoList.length);
+  //   let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(messageDtoList.length);
 
-    if (processSummaryDto.totalRows === 0)
-      return processSummaryDto; 
+  //   if (processSummaryDto.totalRows === 0)
+  //     return processSummaryDto; 
 
-    // * process messages
-    let rowProcessed = 0;
-    for (const messageDto of messageDtoList) {
+  //   // * process messages
+  //   let rowProcessed = 0;
+  //   for (const messageDto of messageDtoList) {
       
-      await this.sendMessage(messageDto)
-      .then( (result: string) => {
-        processSummaryDto.rowsOK++;
-        processSummaryDto.detailsRowsOK.push(`row=${rowProcessed}, response=${result}`);
-      })
-      .catch(err => {
-        processSummaryDto.rowsKO++;
-        processSummaryDto.detailsRowsKO.push(`row=${rowProcessed}, error=${err}`);
-      })
-      .finally( () => {
-        rowProcessed++;
-      })
+  //     await this.sendMessage(messageDto)
+  //     .then( (result: string) => {
+  //       processSummaryDto.rowsOK++;
+  //       processSummaryDto.detailsRowsOK.push(`row=${rowProcessed}, response=${result}`);
+  //     })
+  //     .catch(err => {
+  //       processSummaryDto.rowsKO++;
+  //       processSummaryDto.detailsRowsKO.push(`row=${rowProcessed}, error=${err}`);
+  //     })
+  //     .finally( () => {
+  //       rowProcessed++;
+  //     })
 
-    }
+  //   }
 
-    const end = performance.now();
-    this.logger.log(`sendMessages: executed, executionTime=${(end - start) / 1000} seconds, summary=${JSON.stringify(processSummaryDto)}`);
-    return processSummaryDto;
-  }
+  //   const end = performance.now();
+  //   this.logger.log(`sendMessages: executed, executionTime=${(end - start) / 1000} seconds, summary=${JSON.stringify(processSummaryDto)}`);
+  //   return processSummaryDto;
+  // }
 
   sendMessage(messageDto: MessageDto): Promise<string> {
     this.logger.log(`sendMessage: queueType=${this.queueType}, messageDto=${JSON.stringify(messageDto)}`);

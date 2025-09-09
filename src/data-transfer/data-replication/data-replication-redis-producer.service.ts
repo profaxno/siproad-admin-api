@@ -71,6 +71,11 @@ export class DataReplicationRedisProducerService {
         promiseList.push(this.sendMessage(this.queueSales, messageDto));
         break;
       }
+      case ProcessEnum.PRODUCT_UNIT_UPDATE:
+      case ProcessEnum.PRODUCT_UNIT_DELETE: {
+        promiseList.push(this.sendMessage(this.queueProducts, messageDto));
+        break;
+      }
       default: {
         promiseList.push(this.sendMessage(this.queueProducts, messageDto));
         promiseList.push(this.sendMessage(this.queuePurchases, messageDto));
@@ -95,7 +100,7 @@ export class DataReplicationRedisProducerService {
 
   private sendMessage(queue: Queue, messageDto: MessageDto) {
 
-    return queue.add('job', messageDto)
+    return queue.add('job', messageDto, { attempts: 3, backoff: { type: 'exponential', delay: 5000 }, removeOnComplete: true, removeOnFail: false })
     .then((job: Job) => `job generated, id=${job.id}`)
     .catch((error) => {
       this.logger.error(`sendMessage: error=${JSON.stringify(error)}`);

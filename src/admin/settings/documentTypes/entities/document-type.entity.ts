@@ -1,7 +1,7 @@
 import { Company } from "src/admin/companies/entities/company.entity";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity("adm_document_type")
+@Entity("adm_setting_document_type")
 export class DocumentType {
   
   @PrimaryGeneratedColumn('uuid')

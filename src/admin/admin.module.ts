@@ -20,17 +20,20 @@ import { RoleService } from './roles/role.service';
 import { PermissionService } from './roles/permission.service';
 
 import { DataReplicationModule } from 'src/data-transfer/data-replication/data-replication.module';
-import { DocumentType } from './documentTypes/entities/document-type.entity';
-import { DocumentTypeController } from './documentTypes/document-type.controller';
-import { DocumentTypeService } from './documentTypes/document-type.service';
+import { DocumentType } from './settings/documentTypes/entities/document-type.entity';
+import { DocumentTypeController } from './settings/documentTypes/document-type.controller';
+import { DocumentTypeService } from './settings/documentTypes/document-type.service';
+import { ProductUnit } from './settings/productUnits/entities/product-unit.entity';
+import { ProductUnitController } from './settings/productUnits/product-unit.controller';
+import { ProductUnitService } from './settings/productUnits/product-unit.service';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Company, User, UserRole, Role, RolePermission, Permission, DocumentType], 'adminConn'),
+    TypeOrmModule.forFeature([Company, User, UserRole, Role, RolePermission, Permission, DocumentType, ProductUnit], 'adminConn'),
     DataReplicationModule
   ],
-  controllers: [CompanyController, UserController, RoleController, PermissionController, DocumentTypeController],
-  providers: [CompanyService, UserService, RoleService, PermissionService, DocumentTypeService]
+  controllers: [CompanyController, UserController, RoleController, PermissionController, DocumentTypeController, ProductUnitController],
+  providers: [CompanyService, UserService, RoleService, PermissionService, DocumentTypeService, ProductUnitService]
 })
 export class AdminModule {}

@@ -80,20 +80,25 @@ export class CompanyService {
         throw new NotFoundException(msg);
       }
       
-      return entity;
-    })
-    .then( (entity: Company) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: Company) => this.save(entity) ) // * update
-    .then( (entity: Company) => {
-      const dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter); // * map to dto
-      
-      // * replication data
-      const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify([dto]));
-      this.replicationService.sendMessages([messageDto]);
+      return this.replicationData(dto) // * replication data
+      .then( () => {
 
-      const end = performance.now();
-      this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-      return dto;
+        return this.prepareEntity(entity, dto) // * prepare
+        .then( (entity: Company) => this.save(entity) ) // * save
+        .then( (entity: Company) => new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter) ) // * map to dto
+        .then( (dto: CompanyDto) => {
+          const end = performance.now();
+          this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
+        })
+        .catch(error => {
+          const dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter);
+          this.replicationData(dto); // * rollback
+          throw error;
+        })
+
+      })
+
     })
     .catch(error => {
       if(error instanceof NotFoundException)
@@ -102,44 +107,6 @@ export class CompanyService {
       this.logger.error(`update: error=${error.message}`);
       throw error;
     })
-
-    // const inputDto: SearchInputDto = new SearchInputDto(dto.id);
-    
-    // return this.findByParams({}, inputDto)
-    // .then( (entityList: Company[]) => {
-
-    //   // * validate
-    //   if(entityList.length == 0){
-    //     const msg = `company not found, id=${dto.id}`;
-    //     this.logger.warn(`update: not executed (${msg})`);
-    //     throw new NotFoundException(msg);
-    //   }
-      
-    //   // * update
-    //   let entity = entityList[0];
-    //   entity.name = dto.name.toUpperCase();
-      
-    //   return this.save(entity)
-    //   .then( (entity: Company) => {
-    //     dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter); // * map to dto
-
-    //     // * replication data
-    //     const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify([dto]));
-    //     this.replicationService.sendMessages([messageDto]);
-
-    //     const end = performance.now();
-    //     this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-    //     return dto;
-    //   })
-      
-    // })
-    // .catch(error => {
-    //   if(error instanceof NotFoundException)
-    //     throw error;
-      
-    //   this.logger.error(`update: error`, error);
-    //   throw error;
-    // })
 
   }
 
@@ -160,20 +127,24 @@ export class CompanyService {
         throw new AlreadyExistException(msg);
       }
       
-      return new Company();
-    })
-    .then( (entity: Company) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: Company) => this.save(entity) ) // * update
-    .then( (entity: Company) => {
-      const dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter); // * map to dto
-      
-      // * replication data
-      const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify([dto]));
-      this.replicationService.sendMessages([messageDto]);
+      return this.prepareEntity(new Company(), dto) // * prepare
+      .then( (entity: Company) => this.save(entity) ) // * save
+      .then( (entity: Company) => new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter) ) // * map to dto
 
-      const end = performance.now();
-      this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
-      return dto;
+    })
+    .then( (dto: CompanyDto) => {
+
+      return this.replicationData(dto) // * replication data
+      .then( () => {
+        const end = performance.now();
+        this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+        return dto;
+      })
+      .catch(error => {
+        this.remove(dto.id); // * rollback
+        throw error;
+      })
+
     })
     .catch(error => {
       if(error instanceof NotFoundException || error instanceof AlreadyExistException)
@@ -182,45 +153,6 @@ export class CompanyService {
       this.logger.error(`create: error=${error.message}`);
       throw error;
     })
-
-    // // * find company
-    // const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
-    
-    // return this.findByParams({}, inputDto)
-    // .then( (entityList: Company[]) => {
-
-    //   // * validate
-    //   if(entityList.length > 0){
-    //     const msg = `company already exists, name=${dto.name}`;
-    //     this.logger.warn(`create: not executed (${msg})`);
-    //     throw new AlreadyExistException(msg);
-    //   }
-
-    //   // * create
-    //   let entity = new Company();
-    //   entity.name = dto.name.toUpperCase();
-      
-    //   return this.save(entity)
-    //   .then( (entity: Company) => {
-    //     dto = new CompanyDto(entity.name, entity.id, entity.imgUrlHeader, entity.imgUrlFooter); // * map to dto
-
-    //     // * replication data
-    //     const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify([dto]));
-    //     this.replicationService.sendMessages([messageDto]);
-
-    //     const end = performance.now();
-    //     this.logger.log(`create: OK, runtime=${(end - start) / 1000} seconds`);
-    //     return dto;
-    //   })
-
-    // })
-    // .catch(error => {
-    //   if(error instanceof AlreadyExistException)
-    //     throw error;
-
-    //   this.logger.error(`create: error`, error);
-    //   throw error;
-    // })
 
   }
 
@@ -250,7 +182,7 @@ export class CompanyService {
       // * replication data
       const jsonBasic: JsonBasic = { id: entity.id }
       const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify([jsonBasic]));
-      this.replicationService.sendMessages([messageDto]);
+      this.replicationService.sendMessage(messageDto);
 
       const end = performance.now();
       this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
@@ -270,65 +202,6 @@ export class CompanyService {
       throw error;
     })
 
-    // const inputDto: SearchInputDto = new SearchInputDto(id);
-    
-    // return this.findByParams({}, inputDto)
-    // .then( (entityList: Company[]) => {
-      
-    //   if(entityList.length == 0){
-    //     const msg = `company not found, id=${id}`;
-    //     this.logger.warn(`remove: not executed (${msg})`);
-    //     throw new NotFoundException(msg);
-    //   }
-
-    //   // * delete: update field active
-    //   const entity = entityList[0];
-    //   entity.active = false;
-
-    //   return this.save(entity)
-    //   .then( (entity: Company) => {
-
-    //     // * replication data
-    //     const jsonBasic: JsonBasic = { id: entity.id }
-    //     const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify([jsonBasic]));
-    //     this.replicationService.sendMessages([messageDto]);
-
-    //     const end = performance.now();
-    //     this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
-    //     return 'deleted';
-
-    //   })
-
-    //   // return this.companyRepository.delete(id)
-    //   // .then( () => {
-
-    //   //   // * replication data
-    //   //   const entity = entityList[0];
-    //   //   const dto = new CompanyDto(entity.name, entity.id); // * map to dto
-    //   //   const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(dto));
-    //   //   const dataReplicationDto: DataReplicationDto = new DataReplicationDto([messageDto]);
-    //   //   this.replicationService.sendMessages(dataReplicationDto);
-
-    //   //   const end = performance.now();
-    //   //   this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
-    //   //   return 'deleted';
-    //   // })
-
-    // })
-    // .catch(error => {
-    //   if(error instanceof NotFoundException)
-    //     throw error;
-
-    //   if(error.errno == 1217) {
-    //     const msg = 'company is being used';
-    //     this.logger.warn(`remove: not executed (${msg})`, error);
-    //     throw new IsBeingUsedException(msg);
-    //   }
-
-    //   this.logger.error('remove: error', error);
-    //   throw error;
-    // })
-
   }
   
   synchronize(paginationDto: SearchPaginationDto): Promise<string> {
@@ -343,35 +216,53 @@ export class CompanyService {
         return msg;
       }
 
+      // * generate update message
       const updateDtoList: CompanyDto[] = entityList.reduce( (acc, value) => {
         if(value.active)
           acc.push(new CompanyDto(value.name, value.id));          
 
         return acc;
       }, []);
-      
-      
+
+      const updateMessage = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(updateDtoList));
+
+      // * generate delete message
       const deleteList: JsonBasic[] = entityList.reduce( (acc, value) => {
         if(!value.active)
           acc.push({ id: value.id });
         return acc;
       }, []);
 
-      const updateMessage = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify(updateDtoList));
       const deleteMessage = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_DELETE, JSON.stringify(deleteList));
 
-      // // * generate message list
-      // const messageDtoList: MessageDto[] = entityList.map( value => {
-      //   const process = value.active ? ProcessEnum.COMPANY_UPDATE : ProcessEnum.COMPANY_DELETE;
-      //   const dto = new CompanyDto(value.name, value.id);
-      //   return new MessageDto(SourceEnum.API_ADMIN, process, JSON.stringify(dto));
-      // });
+      // * send messages
+      const promiseList: Promise<string>[] = [];
+      promiseList.push(this.replicationService.sendMessage(updateMessage));
+      promiseList.push(this.replicationService.sendMessage(deleteMessage));
 
-      return this.replicationService.sendMessages([updateMessage, deleteMessage])
-      .then( () => {
+      return Promise.allSettled(promiseList)
+      .then( (promiseResultList: PromiseSettledResult<string>[]) => {
+        
+        const result: string = promiseResultList.reduce( (acc, value) => {
+          if (value.status === 'fulfilled') 
+            acc += `job success ${value.value}|`;
+          else acc += `job failed: ${value.reason}|`;
+
+          return acc;
+        }, "");
+        
+        this.logger.log(`synchronize: result=${result}, iteration=${paginationDto.page}`);
+
         paginationDto.page++;
         return this.synchronize(paginationDto);
+        
       })
+
+      // return this.replicationService.sendMessages([updateMessage, deleteMessage])
+      // .then( () => {
+      //   paginationDto.page++;
+      //   return this.synchronize(paginationDto);
+      // })
       
     })
     .catch( error => {
@@ -503,7 +394,7 @@ export class CompanyService {
   //   })
     
   // }
-  
+
   private prepareEntity(entity: Company, dto: CompanyDto): Promise<Company> {
     
     try {
@@ -530,6 +421,11 @@ export class CompanyService {
       this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
       return entity;
     })
+  }
+
+  private replicationData(dto: CompanyDto): Promise<string> {
+    const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.COMPANY_UPDATE, JSON.stringify([dto]));
+    return this.replicationService.sendMessage(messageDto);
   }
 
   private findAll(paginationDto: SearchPaginationDto): Promise<Company[]> {

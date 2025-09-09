@@ -1,10 +1,10 @@
-import { In, InsertResult, Like, Raw, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, InsertResult, Like, Raw, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 
 import { UserStatusEnum } from './enums/user-status.enum';
 import { User } from './entities/user.entity';
@@ -38,16 +38,15 @@ export class UserService {
   constructor(
     private readonly ConfigService: ConfigService,
 
+    @InjectDataSource('adminConn')
+    private readonly dataSource: DataSource,
+
     @InjectRepository(User, 'adminConn')
     private readonly userRepository: Repository<User>,
 
     @InjectRepository(UserRole, 'adminConn')
     private readonly userRoleRepository: Repository<UserRole>,
 
-    // @InjectRepository(Role, 'adminConn')
-    // private readonly roleRepository: Repository<Role>,
-    
-    // private readonly companyService: CompanyService,
     private readonly roleService: RoleService,
     private readonly replicationService: DataReplicationService
     
@@ -99,23 +98,35 @@ export class UserService {
         throw new NotFoundException(msg);
       }
       
-      return entity;
-    })
-    .then( (entity: User) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: User) => this.save(entity) ) // * update
-    .then( (entity: User) => {
+      return this.replicationData(dto)
+      .then( () => {
+         
+        // * process with transaction db
+        return this.dataSource.transaction( (manager: EntityManager) => {
 
-      return this.updateUserRole(entity, dto.roleList)
-      .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
-      .then( (dto: UserDto) => {
+          // * get repositories
+          const userRepository : Repository<User> = manager.getRepository(User);
+          const userRoleRepository: Repository<UserRole> = manager.getRepository(UserRole);
 
-        // * replication data
-        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify([dto]));
-        this.replicationService.sendMessages([messageDto]);
+          return this.prepareEntity(entity, dto) // * prepare
+          .then( (entity: User) => this.save(entity, userRepository) ) // * save
+          .then( (entity: User) => {
+            return this.updateUserRole(entity, dto.roleList, userRoleRepository)
+            .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
+          })
 
-        const end = performance.now();
-        this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-        return dto;
+        })
+        .then( (dto: UserDto) => {
+          const end = performance.now();
+          this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
+        })
+        .catch(error => {
+          const dto: UserDto = this.generateUserWithRoleList(entity, entity.userRole);
+          this.replicationData(dto); // * rollback
+          throw error;
+        })
+
       })
 
     })
@@ -127,51 +138,56 @@ export class UserService {
       throw error;
     })
 
-    // // * find user
-    // const inputDto: SearchInputDto = new SearchInputDto(dto.id);
-      
-    // return this.findByParams({}, inputDto)
-    // .then( (entityList: User[]) => {
-
-    //   // * validate
-    //   if(entityList.length == 0){
-    //     const msg = `user not found, id=${dto.id}`;
-    //     this.logger.warn(`update: not executed (${msg})`);
-    //     throw new NotFoundException(msg);
-    //   }
-      
-    //   // * update
-    //   const entity = entityList[0];
-
-    //   return this.prepareEntity(entity, dto) // * prepare
-    //   .then( (entity: User) => this.save(entity) ) // * update
-    //   .then( (entity: User) => {
-
-    //     return this.updateUserRole(entity, dto.roleList)
-    //     .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
-    //     .then( (dto: UserDto) => {
-
-    //       // * replication data
-    //       const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify([dto]));
-    //       this.replicationService.sendMessages([messageDto]);
-
-    //       const end = performance.now();
-    //       this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-    //       return dto;
-    //     })
-
-    //   })
-      
-    // })
-    // .catch(error => {
-    //   if(error instanceof NotFoundException)
-    //     throw error;
-
-    //   this.logger.error(`update: error`, error);
-    //   throw error;
-    // })
-
   }
+
+  // update(dto: UserDto): Promise<UserDto> {
+  //   if(!dto.id)
+  //     return this.create(dto); // * create
+    
+  //   this.logger.warn(`update: starting process... dto=${JSON.stringify(dto)}`);
+  //   const start = performance.now();
+
+  //   return this.userRepository.findOne({
+  //     where: { id: dto.id },
+  //   })
+  //   .then( (entity: User) => {
+
+  //     // * validate
+  //     if(!entity){
+  //       const msg = `entity not found, id=${dto.id}`;
+  //       this.logger.warn(`update: not executed (${msg})`);
+  //       throw new NotFoundException(msg);
+  //     }
+      
+  //     return this.prepareEntity(entity, dto) // * prepare
+  //     .then( (entity: User) => this.save(entity) ) // * save
+  //     .then( (entity: User) => {
+
+  //       return this.updateUserRole(entity, dto.roleList)
+  //       .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
+  //       .then( (dto: UserDto) => {
+
+  //         // * replication data
+  //         const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify([dto]));
+  //         this.replicationService.sendMessages([messageDto]);
+
+  //         const end = performance.now();
+  //         this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+  //         return dto;
+  //       })
+
+  //     })
+
+  //   })
+  //   .catch(error => {
+  //     if(error instanceof NotFoundException)
+  //       throw error;
+
+  //     this.logger.error(`update: error=${error.message}`);
+  //     throw error;
+  //   })
+
+  // }
 
   create(dto: UserDto): Promise<UserDto> {
     this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
@@ -189,23 +205,34 @@ export class UserService {
         throw new AlreadyExistException(msg);
       }
       
-      return new User();
-    })
-    .then( (entity: User) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: User) => this.save(entity) ) // * update
-    .then( (entity: User) => {
+      // * process with transaction db
+      return this.dataSource.transaction( (manager: EntityManager) => {
 
-      return this.updateUserRole(entity, dto.roleList)
-      .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
+        // * get repositories
+        const userRepository : Repository<User> = manager.getRepository(User);
+        const userRoleRepository: Repository<UserRole> = manager.getRepository(UserRole);
+
+        return this.prepareEntity(new User(), dto) // * prepare
+        .then( (entity: User) => this.save(entity, userRepository) ) // * save
+        .then( (entity: User) => {
+          return this.updateUserRole(entity, dto.roleList, userRoleRepository)
+          .then( (userRoleList: UserRole[]) => this.generateUserWithRoleList(entity, userRoleList) )
+        })
+
+      })
       .then( (dto: UserDto) => {
 
-        // * replication data
-        const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify([dto]));
-        this.replicationService.sendMessages([messageDto]);
+        return this.replicationData(dto) // * update stock movements
+        .then( () => {
+          const end = performance.now();
+          this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
+        })
+        .catch(error => {
+          this.remove(dto.id); // * rollback
+          throw error;
+        })
 
-        const end = performance.now();
-        this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
-        return dto;
       })
 
     })
@@ -316,7 +343,7 @@ export class UserService {
       // * replication data
       const jsonBasic: JsonBasic = { id: entity.id }
       const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_DELETE, JSON.stringify([jsonBasic]));
-      this.replicationService.sendMessages([messageDto]);
+      this.replicationService.sendMessage(messageDto);
 
       const end = performance.now();
       this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
@@ -402,32 +429,45 @@ export class UserService {
         return msg;
       }
 
+      // * generate update message
       const updateDtoList: UserDto[] = entityList.reduce( (acc, value) => {
         if(value.active)
           acc.push(new UserDto(value.company.id, value.name, value.email, value.password, value.status, value.id));          
         return acc;
       }, []);
 
+      const updateMessage = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify(updateDtoList));
+
+      // * generate delete message
       const deleteList: JsonBasic[] = entityList.reduce( (acc, value) => {
         if(!value.active)
           acc.push({ id: value.id });
         return acc;
       }, []);
 
-      const updateMessage = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify(updateDtoList));
       const deleteMessage = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_DELETE, JSON.stringify(deleteList));
 
-      // const messageDtoList: MessageDto[] = entityList.map( value => {
-      //   const process = value.active ? ProcessEnum.USER_UPDATE : ProcessEnum.USER_DELETE;
-      //   const dto = new UserDto(value.company.id, value.name, value.email, value.password, value.status, value.id);
-      //   delete dto.password;
-      //   return new MessageDto(SourceEnum.API_ADMIN, process, JSON.stringify(dto));
-      // });
-      
-      return this.replicationService.sendMessages([updateMessage, deleteMessage])
-      .then( () => {
+      // * send messages
+      const promiseList: Promise<string>[] = [];
+      promiseList.push(this.replicationService.sendMessage(updateMessage));
+      promiseList.push(this.replicationService.sendMessage(deleteMessage));
+
+      return Promise.allSettled(promiseList)
+      .then( (promiseResultList: PromiseSettledResult<string>[]) => {
+        
+        const result: string = promiseResultList.reduce( (acc, value) => {
+          if (value.status === 'fulfilled') 
+            acc += `job success ${value.value}|`;
+          else acc += `job failed: ${value.reason}|`;
+
+          return acc;
+        }, "");
+        
+        this.logger.log(`synchronize: result=${result}, iteration=${paginationDto.page}`);
+
         paginationDto.page++;
         return this.synchronize(companyId, paginationDto);
+        
       })
       
     })
@@ -579,12 +619,15 @@ export class UserService {
     
   }
 
-  private save(entity: User): Promise<User> {
+  private save(entity: User, userRepository?: Repository<User>): Promise<User> {
     const start = performance.now();
 
-    const newEntity: User = this.userRepository.create(entity);
+    if(!userRepository)
+      userRepository = this.userRepository;
 
-    return this.userRepository.save(newEntity)
+    const newEntity: User = userRepository.create(entity);
+
+    return userRepository.save(newEntity)
     .then( (entity: User) => {
       const end = performance.now();
       this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
@@ -592,7 +635,7 @@ export class UserService {
     })
   }
 
-  private updateUserRole(user: User, userRoleDtoList: UserRoleDto[] = []): Promise<UserRole[]> {
+  private updateUserRole(user: User, userRoleDtoList: UserRoleDto[] = [], userRoleRepository: Repository<UserRole>): Promise<UserRole[]> {
     this.logger.log(`updateUserRole: starting process... user=${JSON.stringify(user)}, userRoleDtoList=${JSON.stringify(userRoleDtoList)}`);
     const start = performance.now();
 
@@ -603,8 +646,7 @@ export class UserService {
 
     // * find roles by id
     const roleIdList = userRoleDtoList.map( (item) => item.id );
-    // const inputDto: SearchInputDto = new SearchInputDto(undefined, undefined, roleIdList);
-
+    
     return this.roleService.findByIds({}, roleIdList)
     .then( (roleList: Role[]) => {
 
@@ -615,24 +657,31 @@ export class UserService {
         throw new NotFoundException(msg); 
       }
 
-      // * create userRole
-      return this.userRoleRepository.findBy( { user } ) // * find userRole
-      .then( (userRoleList: UserRole[]) => this.userRoleRepository.remove(userRoleList)) // * remove userRoles
+      // * create user-role
+      return userRoleRepository.find({
+        where: { user },
+      })
+      .then( (userRoleList: UserRole[]) => userRoleRepository.remove(userRoleList)) // * remove userRoles
       .then( () => {
         
-        // * generate user role list
+        // * generate list to insert
         const userRoleList: UserRole[] = roleList.map( (role: Role) => {
           const userRole = new UserRole();
           userRole.user = user;
           userRole.role = role;
-          return userRole;
+          return userRoleRepository.create(userRole);
         })
   
         // * bulk insert
-        return this.bulkInsertUserRoles(userRoleList)
-        .then( (userRoleList: UserRole[]) => {
+        return userRoleRepository
+        .createQueryBuilder()
+        .insert()
+        .into(UserRole)
+        .values(userRoleList)
+        .execute()
+        .then( (insertResult: InsertResult) => {
           const end = performance.now();
-          this.logger.log(`updateUserRole: OK, runtime=${(end - start) / 1000} seconds`);
+          this.logger.log(`updateUserRole: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
           return userRoleList;
         })
 
@@ -642,27 +691,32 @@ export class UserService {
 
   }
   
-  private bulkInsertUserRoles(userRoleList: UserRole[]): Promise<UserRole[]> {
-    const start = performance.now();
-    this.logger.log(`bulkInsertUserRoles: starting process... listSize=${userRoleList.length}`);
-
-    const newUserRoleList: UserRole[] = userRoleList.map( (value) => this.userRoleRepository.create(value));
-    
-    return this.userRoleRepository.manager.transaction( async(transactionalEntityManager) => {
-      
-      return transactionalEntityManager
-        .createQueryBuilder()
-        .insert()
-        .into(UserRole)
-        .values(newUserRoleList)
-        .execute()
-        .then( (insertResult: InsertResult) => {
-          const end = performance.now();
-          this.logger.log(`bulkInsertUserRoles: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
-          return newUserRoleList;
-        })
-    })
+  private replicationData(dto: UserDto): Promise<string> {
+    const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.USER_UPDATE, JSON.stringify([dto]));
+    return this.replicationService.sendMessage(messageDto);
   }
+
+  // private bulkInsertUserRoles(userRoleList: UserRole[]): Promise<UserRole[]> {
+  //   const start = performance.now();
+  //   this.logger.log(`bulkInsertUserRoles: starting process... listSize=${userRoleList.length}`);
+
+  //   const newUserRoleList: UserRole[] = userRoleList.map( (value) => this.userRoleRepository.create(value));
+    
+  //   return this.userRoleRepository.manager.transaction( async(transactionalEntityManager) => {
+      
+  //     return transactionalEntityManager
+  //       .createQueryBuilder()
+  //       .insert()
+  //       .into(UserRole)
+  //       .values(newUserRoleList)
+  //       .execute()
+  //       .then( (insertResult: InsertResult) => {
+  //         const end = performance.now();
+  //         this.logger.log(`bulkInsertUserRoles: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
+  //         return newUserRoleList;
+  //       })
+  //   })
+  // }
 
   private findAll(paginationDto: SearchPaginationDto, companyId: string): Promise<User[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;

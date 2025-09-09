@@ -1,10 +1,10 @@
-import { In, InsertResult, Like, Raw, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, InsertResult, Like, Raw, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 
 import { RoleDto, RolePermissionDto } from './dto/role.dto';
 import { Role } from './entities/role.entity';
@@ -27,6 +27,9 @@ export class RoleService {
 
   constructor(
     private readonly ConfigService: ConfigService,
+
+    @InjectDataSource('adminConn')
+    private readonly dataSource: DataSource,
 
     @InjectRepository(Role, 'adminConn')
     private readonly roleRepository: Repository<Role>,
@@ -88,21 +91,27 @@ export class RoleService {
         throw new NotFoundException(msg);
       }
       
-      return entity;
-    })
-    .then( (entity: Role) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: Role) => this.save(entity) ) // * update
-    .then( (entity: Role) => {
+      // * process with transaction db
+      return this.dataSource.transaction( (manager: EntityManager) => {
 
-      return this.updateRolePermission(entity, dto.permissionList)
-      .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+        // * get repositories
+        const roleRepository : Repository<Role> = manager.getRepository(Role);
+        const rolePermissionRepository: Repository<RolePermission> = manager.getRepository(RolePermission);
+
+        return this.prepareEntity(entity, dto) // * prepare
+        .then( (entity: Role) => this.save(entity, roleRepository) ) // * save
+        .then( (entity: Role) => {
+          return this.updateRolePermission(entity, dto.permissionList, rolePermissionRepository)
+          .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+        })
+
+      })
       .then( (dto: RoleDto) => {
-
         const end = performance.now();
         this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
         return dto;
       })
-
+      
     })
     .catch(error => {
       if(error instanceof NotFoundException)
@@ -112,47 +121,52 @@ export class RoleService {
       throw error;
     })
 
-    // // * find role
-    // const inputDto: SearchInputDto = new SearchInputDto(dto.id);
-      
-    // return this.findByParams({}, inputDto)
-    // .then( (entityList: Role[]) => {
-
-    //   // * validate
-    //   if(entityList.length == 0){
-    //     const msg = `role not found, id=${dto.id}`;
-    //     this.logger.warn(`update: not executed (${msg})`);
-    //     throw new NotFoundException(msg);
-    //   }
-
-    //   // * update
-    //   const entity = entityList[0];
-      
-    //   return this.prepareEntity(entity, dto) // * prepare
-    //   .then( (entity: Role) => this.save(entity) ) // * update
-    //   .then( (entity: Role) => {
-
-    //     return this.updateRolePermission(entity, dto.permissionList)
-    //     .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
-    //     .then( (dto: RoleDto) => {
-
-    //       const end = performance.now();
-    //       this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-    //       return dto;
-    //     })
-
-    //   })
-      
-    // })
-    // .catch(error => {
-    //   if(error instanceof NotFoundException)
-    //     throw error;
-
-    //   this.logger.error(`update: error`, error);
-    //   throw error;
-    // })
-
   }
+
+  // update(dto: RoleDto): Promise<RoleDto> {
+  //   if(!dto.id)
+  //     return this.create(dto); // * create
+    
+  //   this.logger.warn(`update: starting process... dto=${JSON.stringify(dto)}`);
+  //   const start = performance.now();
+    
+  //   return this.roleRepository.findOne({
+  //     where: { id: dto.id },
+  //   })
+  //   .then( (entity: Role) => {
+
+  //     // * validate
+  //     if(!entity){
+  //       const msg = `entity not found, id=${dto.id}`;
+  //       this.logger.warn(`update: not executed (${msg})`);
+  //       throw new NotFoundException(msg);
+  //     }
+      
+  //     return entity;
+  //   })
+  //   .then( (entity: Role) => this.prepareEntity(entity, dto) )// * prepare
+  //   .then( (entity: Role) => this.save(entity) ) // * update
+  //   .then( (entity: Role) => {
+
+  //     return this.updateRolePermission(entity, dto.permissionList)
+  //     .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+  //     .then( (dto: RoleDto) => {
+
+  //       const end = performance.now();
+  //       this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+  //       return dto;
+  //     })
+
+  //   })
+  //   .catch(error => {
+  //     if(error instanceof NotFoundException)
+  //       throw error;
+
+  //     this.logger.error(`update: error=${error.message}`);
+  //     throw error;
+  //   })
+
+  // }
 
   create(dto: RoleDto): Promise<RoleDto> {
     this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
@@ -170,16 +184,22 @@ export class RoleService {
         throw new AlreadyExistException(msg);
       }
       
-      return new Role();
-    })
-    .then( (entity: Role) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: Role) => this.save(entity) ) // * update
-    .then( (entity: Role) => {
+      // * process with transaction db
+      return this.dataSource.transaction( (manager: EntityManager) => {
 
-      return this.updateRolePermission(entity, dto.permissionList)
-      .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+        // * get repositories
+        const roleRepository : Repository<Role> = manager.getRepository(Role);
+        const rolePermissionRepository: Repository<RolePermission> = manager.getRepository(RolePermission);
+      
+        return this.prepareEntity(new Role(), dto) // * prepare
+        .then( (entity: Role) => this.save(entity, roleRepository) ) // * update
+        .then( (entity: Role) => {
+          return this.updateRolePermission(entity, dto.permissionList, rolePermissionRepository)
+          .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+        })
+
+      })
       .then( (dto: RoleDto) => {
-
         const end = performance.now();
         this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
         return dto;
@@ -194,47 +214,89 @@ export class RoleService {
       throw error;
     })
 
-    // // * find role
-    // const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
-      
-    // return this.findByParams({}, inputDto, dto.companyId)
-    // .then( (entityList: Role[]) => {
-
-    //   // * validate
-    //   if(entityList.length > 0){
-    //     const msg = `role already exists, name=${dto.name}`;
-    //     this.logger.warn(`create: not executed (${msg})`);
-    //     throw new AlreadyExistException(msg);
-    //   }
-
-    //   // * create
-    //   const entity = new Role();
-      
-    //   return this.prepareEntity(entity, dto) // * prepare
-    //   .then( (entity: Role) => this.save(entity) ) // * update
-    //   .then( (entity: Role) => {
-
-    //     return this.updateRolePermission(entity, dto.permissionList)
-    //     .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
-    //     .then( (dto: RoleDto) => {
-
-    //       const end = performance.now();
-    //       this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
-    //       return dto;
-    //     })
-
-    //   })
-
-    // })
-    // .catch(error => {
-    //   if(error instanceof NotFoundException || error instanceof AlreadyExistException)
-    //     throw error;
-
-    //   this.logger.error(`create: error`, error);
-    //   throw error;
-    // })
-
   }
+
+  // create(dto: RoleDto): Promise<RoleDto> {
+  //   this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
+  //   const start = performance.now();
+
+  //   return this.roleRepository.findOne({
+  //     where: { name: dto.name },
+  //   })
+  //   .then( (entity: Role) => {
+
+  //     // * validate
+  //     if(entity){
+  //       const msg = `name already exists, name=${dto.name}`;
+  //       this.logger.warn(`create: not executed (${msg})`);
+  //       throw new AlreadyExistException(msg);
+  //     }
+      
+  //     return new Role();
+  //   })
+  //   .then( (entity: Role) => this.prepareEntity(entity, dto) )// * prepare
+  //   .then( (entity: Role) => this.save(entity) ) // * update
+  //   .then( (entity: Role) => {
+
+  //     return this.updateRolePermission(entity, dto.permissionList)
+  //     .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+  //     .then( (dto: RoleDto) => {
+
+  //       const end = performance.now();
+  //       this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+  //       return dto;
+  //     })
+
+  //   })
+  //   .catch(error => {
+  //     if(error instanceof NotFoundException || error instanceof AlreadyExistException)
+  //       throw error;
+
+  //     this.logger.error(`create: error=${error.message}`);
+  //     throw error;
+  //   })
+
+  //   // // * find role
+  //   // const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
+      
+  //   // return this.findByParams({}, inputDto, dto.companyId)
+  //   // .then( (entityList: Role[]) => {
+
+  //   //   // * validate
+  //   //   if(entityList.length > 0){
+  //   //     const msg = `role already exists, name=${dto.name}`;
+  //   //     this.logger.warn(`create: not executed (${msg})`);
+  //   //     throw new AlreadyExistException(msg);
+  //   //   }
+
+  //   //   // * create
+  //   //   const entity = new Role();
+      
+  //   //   return this.prepareEntity(entity, dto) // * prepare
+  //   //   .then( (entity: Role) => this.save(entity) ) // * update
+  //   //   .then( (entity: Role) => {
+
+  //   //     return this.updateRolePermission(entity, dto.permissionList)
+  //   //     .then( (rolePermissionList: RolePermission[]) => this.generateRoleWithPermissionList(entity, rolePermissionList) )
+  //   //     .then( (dto: RoleDto) => {
+
+  //   //       const end = performance.now();
+  //   //       this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+  //   //       return dto;
+  //   //     })
+
+  //   //   })
+
+  //   // })
+  //   // .catch(error => {
+  //   //   if(error instanceof NotFoundException || error instanceof AlreadyExistException)
+  //   //     throw error;
+
+  //   //   this.logger.error(`create: error`, error);
+  //   //   throw error;
+  //   // })
+
+  // }
 
   // find(companyId: string, paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<RoleDto[]> {
   //   const start = performance.now();
@@ -485,8 +547,11 @@ export class RoleService {
     
   }
 
-  private save(entity: Role): Promise<Role> {
+  private save(entity: Role, roleRepository?: Repository<Role>): Promise<Role> {
     const start = performance.now();
+
+    if(!roleRepository)
+      roleRepository = this.roleRepository;
 
     const newEntity: Role = this.roleRepository.create(entity);
 
@@ -498,12 +563,12 @@ export class RoleService {
     })
   }
 
-  private updateRolePermission(role: Role, rolePermissionDtoList: RolePermissionDto[] = []): Promise<RolePermission[]> {
+  private updateRolePermission(role: Role, rolePermissionDtoList: RolePermissionDto[] = [], rolePermissionRepository: Repository<RolePermission>): Promise<RolePermission[]> {
     this.logger.log(`updateRolePermission: starting process... role=${JSON.stringify(role)}, rolePermissionDtoList=${JSON.stringify(rolePermissionDtoList)}`);
     const start = performance.now();
 
     if(rolePermissionDtoList.length == 0){
-      this.logger.warn(`updateRolePermission: not executed (role role list empty)`);
+      this.logger.warn(`updateRolePermission: not executed (role permission list empty)`);
       return Promise.resolve([]);
     }
 
@@ -521,24 +586,31 @@ export class RoleService {
         throw new NotFoundException(msg); 
       }
 
-      // * create rolePermission
-      return this.rolePermissionRepository.findBy( { role } ) // * find rolePermission
-      .then( (rolePermissionList: RolePermission[]) => this.rolePermissionRepository.remove(rolePermissionList)) // * remove rolePermissions
+      // * create role-permission
+      return rolePermissionRepository.find({
+        where: { role },
+      })
+      .then( (rolePermissionList: RolePermission[]) => rolePermissionRepository.remove(rolePermissionList)) // * remove rolePermissions
       .then( () => {
         
-        // * generate role role list
+        // * generate list to insert
         const rolePermissionList: RolePermission[] = permissionList.map( (permission: Permission) => {
           const rolePermission = new RolePermission();
           rolePermission.role = role;
           rolePermission.permission = permission;
-          return rolePermission;
+          return rolePermissionRepository.create(rolePermission);;
         })
   
         // * bulk insert
-        return this.bulkInsertRolePermissions(rolePermissionList)
-        .then( (rolePermissionList: RolePermission[]) => {
+        return rolePermissionRepository
+        .createQueryBuilder()
+        .insert()
+        .into(RolePermission)
+        .values(rolePermissionList)
+        .execute()
+        .then( (insertResult: InsertResult) => {
           const end = performance.now();
-          this.logger.log(`updateRolePermission: OK, runtime=${(end - start) / 1000} seconds`);
+          this.logger.log(`updateRolePermission: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
           return rolePermissionList;
         })
 
@@ -548,27 +620,27 @@ export class RoleService {
 
   }
   
-  private bulkInsertRolePermissions(rolePermissionList: RolePermission[]): Promise<RolePermission[]> {
-    const start = performance.now();
-    this.logger.log(`bulkInsertRolePermissions: starting process... listSize=${rolePermissionList.length}`);
+  // private bulkInsertRolePermissions(rolePermissionList: RolePermission[]): Promise<RolePermission[]> {
+  //   const start = performance.now();
+  //   this.logger.log(`bulkInsertRolePermissions: starting process... listSize=${rolePermissionList.length}`);
 
-    const newRolePermissionList: RolePermission[] = rolePermissionList.map( (value) => this.rolePermissionRepository.create(value));
+  //   const newRolePermissionList: RolePermission[] = rolePermissionList.map( (value) => this.rolePermissionRepository.create(value));
     
-    return this.rolePermissionRepository.manager.transaction( async(transactionalEntityManager) => {
+  //   return this.rolePermissionRepository.manager.transaction( async(transactionalEntityManager) => {
       
-      return transactionalEntityManager
-        .createQueryBuilder()
-        .insert()
-        .into(RolePermission)
-        .values(newRolePermissionList)
-        .execute()
-        .then( (insertResult: InsertResult) => {
-          const end = performance.now();
-          this.logger.log(`bulkInsertRolePermissions: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
-          return newRolePermissionList;
-        })
-    })
-  }
+  //     return transactionalEntityManager
+  //       .createQueryBuilder()
+  //       .insert()
+  //       .into(RolePermission)
+  //       .values(newRolePermissionList)
+  //       .execute()
+  //       .then( (insertResult: InsertResult) => {
+  //         const end = performance.now();
+  //         this.logger.log(`bulkInsertRolePermissions: OK, runtime=${(end - start) / 1000} seconds, insertResult=${JSON.stringify(insertResult.raw)}`);
+  //         return newRolePermissionList;
+  //       })
+  //   })
+  // }
 
   private searchEntitiesByValues(companyId: string, paginationDto: SearchPaginationDto, inputDto: RoleSearchInputDto): Promise<Role[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;

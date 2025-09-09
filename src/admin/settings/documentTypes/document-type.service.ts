@@ -6,12 +6,12 @@ import { Injectable, Logger, NotFoundException, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { AlreadyExistException, IsBeingUsedException } from '../../common/exceptions/common.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../../../common/exceptions/common.exception';
 
 import { DocumentTypeDto, DocumentTypeSearchInputDto } from './dto';
 import { DocumentType } from './entities/document-type.entity';
 
-import { Company } from '../companies/entities/company.entity';
+import { Company } from '../../companies/entities/company.entity';
 import { MessageDto } from 'src/data-transfer/dto/message.dto';
 import { ProcessEnum, SourceEnum } from 'src/data-transfer/enums';
 import { DataReplicationService } from 'src/data-transfer/data-replication/data-replication.service';
@@ -53,20 +53,25 @@ export class DocumentTypeService {
         throw new NotFoundException(msg);
       }
       
-      return entity;
-    })
-    .then( (entity: DocumentType) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: DocumentType) => this.save(entity) ) // * update
-    .then( (entity: DocumentType) => {
-      const dto = new DocumentTypeDto(entity.company.id, entity.name, entity.id);
-      
-      // * replication data
-      const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.DOCUMENT_TYPE_UPDATE, JSON.stringify([dto]));
-      this.replicationService.sendMessages([messageDto]);
+      return this.replicationData(dto) // * replication data
+      .then( () => {
 
-      const end = performance.now();
-      this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
-      return dto;
+        return this.prepareEntity(entity, dto) // * prepare
+        .then( (entity: DocumentType) => this.save(entity) ) // * save
+        .then( (entity: DocumentType) => new DocumentTypeDto(entity.company.id, entity.name, entity.id) )
+        .then( (dto: DocumentTypeDto) => {
+          const end = performance.now();
+          this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
+          return dto;
+        })
+        .catch(error => {
+          const dto = new DocumentTypeDto(entity.company.id, entity.name, entity.id);
+          this.replicationData(dto); // * rollback
+          throw error;
+        })
+
+      })
+
     })
     .catch(error => {
       if(error instanceof NotFoundException)
@@ -95,20 +100,24 @@ export class DocumentTypeService {
         throw new AlreadyExistException(msg);
       }
       
-      return new DocumentType();
-    })
-    .then( (entity: DocumentType) => this.prepareEntity(entity, dto) )// * prepare
-    .then( (entity: DocumentType) => this.save(entity) ) // * update
-    .then( (entity: DocumentType) => {
-      const dto = new DocumentTypeDto(entity.company.id, entity.name, entity.id);
-      
-      // * replication data
-      const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.DOCUMENT_TYPE_UPDATE, JSON.stringify([dto]));
-      this.replicationService.sendMessages([messageDto]);
+      return this.prepareEntity(new DocumentType(), dto) // * prepare
+      .then( (entity: DocumentType) => this.save(entity) ) // * save
+      .then( (entity: DocumentType) => new DocumentTypeDto(entity.company.id, entity.name, entity.id) )
 
-      const end = performance.now();
-      this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
-      return dto;
+    })
+    .then( (dto: DocumentTypeDto) => {
+        
+      return this.replicationData(dto) // * replication data
+      .then( () => {
+        const end = performance.now();
+        this.logger.log(`create: executed, runtime=${(end - start) / 1000} seconds`);
+        return dto;
+      })
+      .catch(error => {
+        this.remove(dto.id); // * rollback
+        throw error;
+      })
+
     })
     .catch(error => {
       if(error instanceof NotFoundException || error instanceof AlreadyExistException)
@@ -146,7 +155,7 @@ export class DocumentTypeService {
       // * replication data
       const jsonBasic: JsonBasic = { id: entity.id }
       const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.DOCUMENT_TYPE_DELETE, JSON.stringify([jsonBasic]));
-      this.replicationService.sendMessages([messageDto]);
+      this.replicationService.sendMessage(messageDto);
 
       const end = performance.now();
       this.logger.log(`remove: OK, runtime=${(end - start) / 1000} seconds`);
@@ -225,6 +234,11 @@ export class DocumentTypeService {
       this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
       return entity;
     })
+  }
+
+  private replicationData(dto: DocumentTypeDto): Promise<string> {
+    const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.DOCUMENT_TYPE_UPDATE, JSON.stringify([dto]));
+    return this.replicationService.sendMessage(messageDto);
   }
 
   private searchEntitiesByValues(companyId: string, paginationDto: SearchPaginationDto, inputDto: DocumentTypeSearchInputDto): Promise<DocumentType[]> {
