@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { Company } from "./company.entity";
-import { UserRole } from "./user-role.entity";
+
+import { Company } from "src/admin/companies/entities/company.entity";
+import { UserRole } from "../../users/entities/user-role.entity";
 import { RolePermission } from "./role-permission.entity";
 
 @Entity("adm_role")

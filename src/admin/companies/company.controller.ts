@@ -3,9 +3,10 @@ import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxno
 
 import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
 
-import { CompanyDto } from './dto';
+import { CompanyDto } from './dto/company.dto';
+import { CompanySearchInputDto } from './dto/company-search.dto';
 import { CompanyService } from './company.service';
-import { AlreadyExistException, IsBeingUsedException } from '../common/exceptions/common.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../../common/exceptions/common.exception';
 
 @Controller('companies')
 export class CompanyController {
@@ -61,53 +62,6 @@ export class CompanyController {
     })
   }
 
-  @Get('/find')
-  find(
-    @Query() paginationDto: SearchPaginationDto,
-    @Body() inputDto: SearchInputDto
-  ): Promise<PfxHttpResponseDto> {
-    
-    this.logger.log(`>>> find: paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
-    const start = performance.now();
-    
-    return this.companyService.find(paginationDto, inputDto)
-     .then( (dtoList: CompanyDto[]) => {
-      const response = new PfxHttpResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
-      const end = performance.now();
-      this.logger.log(`<<< find: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-      return response;
-    })
-    .catch( (error: Error) => {
-      if(error instanceof NotFoundException)
-        return new PfxHttpResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
-
-      this.logger.error(error.stack);
-      return new PfxHttpResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-    })
-  }
-
-  @Get('/findOneById/:id')
-  findOneById(@Param('id') id: string): Promise<PfxHttpResponseDto> {
-    this.logger.log(`>>> findOneById: id=${id}`);
-    const start = performance.now();
-
-    return this.companyService.findOneById(id)
-    .then( (dtoList: CompanyDto[]) => {
-      const response = new PfxHttpResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
-      const end = performance.now();
-      this.logger.log(`<<< findOneById: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-      return response;
-    })
-    .catch( (error: Error) => {
-      if(error instanceof NotFoundException)
-        return new PfxHttpResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
-
-      this.logger.error(error.stack);
-      return new PfxHttpResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-    })
-
-  }
-
   @Delete('/:id')
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<PfxHttpResponseDto> {
     this.logger.log(`>>> remove: id=${id}`);
@@ -153,5 +107,78 @@ export class CompanyController {
     })
 
   }
+
+  @Get('/searchByValues/:companyId')
+  searchByValues(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Query() paginationDto: SearchPaginationDto,
+    @Body() inputDto: CompanySearchInputDto
+  ): Promise<PfxHttpResponseDto> {
+
+    this.logger.log(`>>> searchByValues: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
+    const start = performance.now();
+    
+    return this.companyService.searchByValues(companyId, paginationDto, inputDto)
+    .then( (dtoList: CompanyDto[]) => {
+      const response = new PfxHttpResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
+      const end = performance.now();
+      this.logger.log(`<<< searchByValues: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      return response;
+    })
+    .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new PfxHttpResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
+
+      this.logger.error(error.stack);
+      return new PfxHttpResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+    })
+  }
+
+  // @Get('/find')
+  // find(
+  //   @Query() paginationDto: SearchPaginationDto,
+  //   @Body() inputDto: SearchInputDto
+  // ): Promise<PfxHttpResponseDto> {
+    
+  //   this.logger.log(`>>> find: paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
+  //   const start = performance.now();
+    
+  //   return this.companyService.find(paginationDto, inputDto)
+  //    .then( (dtoList: CompanyDto[]) => {
+  //     const response = new PfxHttpResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
+  //     const end = performance.now();
+  //     this.logger.log(`<<< find: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+  //     return response;
+  //   })
+  //   .catch( (error: Error) => {
+  //     if(error instanceof NotFoundException)
+  //       return new PfxHttpResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
+
+  //     this.logger.error(error.stack);
+  //     return new PfxHttpResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+  //   })
+  // }
+
+  // @Get('/findOneById/:id')
+  // findOneById(@Param('id') id: string): Promise<PfxHttpResponseDto> {
+  //   this.logger.log(`>>> findOneById: id=${id}`);
+  //   const start = performance.now();
+
+  //   return this.companyService.findOneById(id)
+  //   .then( (dtoList: CompanyDto[]) => {
+  //     const response = new PfxHttpResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
+  //     const end = performance.now();
+  //     this.logger.log(`<<< findOneById: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+  //     return response;
+  //   })
+  //   .catch( (error: Error) => {
+  //     if(error instanceof NotFoundException)
+  //       return new PfxHttpResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
+
+  //     this.logger.error(error.stack);
+  //     return new PfxHttpResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+  //   })
+
+  // }
   
 }
