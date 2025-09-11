@@ -194,7 +194,7 @@ export class UserService {
     const start = performance.now();
 
     return this.userRepository.findOne({
-      where: { name: dto.name },
+      where: { name: dto.name, company: { id: dto.companyId } },
     })
     .then( (entity: User) => {
 

@@ -173,7 +173,7 @@ export class RoleService {
     const start = performance.now();
 
     return this.roleRepository.findOne({
-      where: { name: dto.name },
+      where: { name: dto.name, company: { id: dto.companyId } },
     })
     .then( (entity: Role) => {
 
