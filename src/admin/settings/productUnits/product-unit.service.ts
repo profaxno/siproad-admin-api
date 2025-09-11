@@ -89,7 +89,7 @@ export class ProductUnitService {
 
     // * create
     return this.productUnitRepository.findOne({
-      where: { name: dto.name },
+      where: { name: dto.name, company: { id: dto.companyId } },
     })
     .then( (entity: ProductUnit) => {
 

@@ -89,7 +89,7 @@ export class DocumentTypeService {
 
     // * create
     return this.documentTypeRepository.findOne({
-      where: { name: dto.name },
+      where: { name: dto.name, company: { id: dto.companyId } },
     })
     .then( (entity: DocumentType) => {
 
