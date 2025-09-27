@@ -6,45 +6,45 @@ import { Injectable, Logger, NotFoundException, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { AlreadyExistException, IsBeingUsedException } from '../../../common/exceptions/common.exception';
+import { AlreadyExistException, IsBeingUsedException } from '../../common/exceptions/common.exception';
 
-import { ProductUnitDto, ProductUnitSearchInputDto } from './dto';
-import { ProductUnit } from './entities/product-unit.entity';
+import { DocumentTypeDto, DocumentTypeSearchInputDto } from './dto';
+import { DocumentType } from './entities/document-type.entity';
 
-import { Company } from '../../companies/entities/company.entity';
+import { Company } from '../companies/entities/company.entity';
 import { MessageDto } from 'src/data-transfer/dto/message.dto';
 import { ProcessEnum, SourceEnum } from 'src/data-transfer/enums';
 import { DataReplicationService } from 'src/data-transfer/data-replication/data-replication.service';
 import { JsonBasic } from 'src/data-transfer/interfaces/json-basic.interface';
 
 @Injectable()
-export class ProductUnitService {
+export class DocumentTypeService {
 
-  private readonly logger = new Logger(ProductUnitService.name);
+  private readonly logger = new Logger(DocumentTypeService.name);
 
   private dbDefaultLimit = 1000;
 
   constructor(
     private readonly ConfigService: ConfigService,
 
-    @InjectRepository(ProductUnit, 'adminConn')
-    private readonly productUnitRepository: Repository<ProductUnit>,
+    @InjectRepository(DocumentType, 'adminConn')
+    private readonly documentTypeRepository: Repository<DocumentType>,
     private readonly replicationService: DataReplicationService
   ){
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
 
-  update(dto: ProductUnitDto): Promise<ProductUnitDto> {
+  update(dto: DocumentTypeDto): Promise<DocumentTypeDto> {
     if(!dto.id)
       return this.create(dto); // * create
     
     this.logger.warn(`update: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    return this.productUnitRepository.findOne({
+    return this.documentTypeRepository.findOne({
       where: { id: dto.id },
     })
-    .then( (entity: ProductUnit) => {
+    .then( (entity: DocumentType) => {
 
       // * validate
       if(!entity){
@@ -57,15 +57,15 @@ export class ProductUnitService {
       .then( () => {
 
         return this.prepareEntity(entity, dto) // * prepare
-        .then( (entity: ProductUnit) => this.save(entity) ) // * save
-        .then( (entity: ProductUnit) => new ProductUnitDto(entity.company.id, entity.name, entity.id) )
-        .then( (dto: ProductUnitDto) => {
+        .then( (entity: DocumentType) => this.save(entity) ) // * save
+        .then( (entity: DocumentType) => new DocumentTypeDto(entity.company.id, entity.name, entity.id) )
+        .then( (dto: DocumentTypeDto) => {
           const end = performance.now();
           this.logger.log(`update: executed, runtime=${(end - start) / 1000} seconds`);
           return dto;
         })
         .catch(error => {
-          const dto = new ProductUnitDto(entity.company.id, entity.name, entity.id);
+          const dto = new DocumentTypeDto(entity.company.id, entity.name, entity.id);
           this.replicationData(dto); // * rollback
           throw error;
         })
@@ -83,15 +83,15 @@ export class ProductUnitService {
 
   }
 
-  create(dto: ProductUnitDto): Promise<ProductUnitDto> {
+  create(dto: DocumentTypeDto): Promise<DocumentTypeDto> {
     this.logger.warn(`create: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     // * create
-    return this.productUnitRepository.findOne({
+    return this.documentTypeRepository.findOne({
       where: { name: dto.name, company: { id: dto.companyId } },
     })
-    .then( (entity: ProductUnit) => {
+    .then( (entity: DocumentType) => {
 
       // * validate
       if(entity){
@@ -100,13 +100,13 @@ export class ProductUnitService {
         throw new AlreadyExistException(msg);
       }
       
-      return this.prepareEntity(new ProductUnit(), dto) // * prepare
-      .then( (entity: ProductUnit) => this.save(entity) ) // * save
-      .then( (entity: ProductUnit) => new ProductUnitDto(entity.company.id, entity.name, entity.id) )
+      return this.prepareEntity(new DocumentType(), dto) // * prepare
+      .then( (entity: DocumentType) => this.save(entity) ) // * save
+      .then( (entity: DocumentType) => new DocumentTypeDto(entity.company.id, entity.name, entity.id) )
 
     })
-    .then( (dto: ProductUnitDto) => {
-    
+    .then( (dto: DocumentTypeDto) => {
+        
       return this.replicationData(dto) // * replication data
       .then( () => {
         const end = performance.now();
@@ -133,10 +133,10 @@ export class ProductUnitService {
     this.logger.log(`remove: starting process... id=${id}`);
     const start = performance.now();
 
-    return this.productUnitRepository.findOne({
+    return this.documentTypeRepository.findOne({
       where: { id },
     })
-    .then( (entity: ProductUnit) => {
+    .then( (entity: DocumentType) => {
 
       // * validate
       if(!entity){
@@ -149,12 +149,12 @@ export class ProductUnitService {
       entity.active = false;
       return entity;
     })
-    .then( (entity: ProductUnit) => this.save(entity) )
-    .then( (entity: ProductUnit) => {
+    .then( (entity: DocumentType) => this.save(entity) )
+    .then( (entity: DocumentType) => {
 
       // * replication data
       const jsonBasic: JsonBasic = { id: entity.id }
-      const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.PRODUCT_UNIT_DELETE, JSON.stringify([jsonBasic]));
+      const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.DOCUMENT_TYPE_DELETE, JSON.stringify([jsonBasic]));
       this.replicationService.sendMessage(messageDto);
 
       const end = performance.now();
@@ -177,12 +177,12 @@ export class ProductUnitService {
 
   }
 
-  searchByValues(companyId: string, paginationDto: SearchPaginationDto, inputDto: ProductUnitSearchInputDto): Promise<ProductUnitDto[]> {
+  searchByValues(companyId: string, paginationDto: SearchPaginationDto, inputDto: DocumentTypeSearchInputDto): Promise<DocumentTypeDto[]> {
     const start = performance.now();
 
     return this.searchEntitiesByValues(companyId, paginationDto, inputDto)
-    .then( (entityList: ProductUnit[]) => entityList.map( (entity) => new ProductUnitDto(entity.company.id, entity.name, entity.id) ) )
-    .then( (dtoList: ProductUnitDto[]) => {
+    .then( (entityList: DocumentType[]) => entityList.map( (entity) => new DocumentTypeDto(entity.company.id, entity.name, entity.id) ) )
+    .then( (dtoList: DocumentTypeDto[]) => {
       
       if(dtoList.length == 0){
         const msg = `entities not found, inputDto=${JSON.stringify(inputDto)}`;
@@ -204,7 +204,7 @@ export class ProductUnitService {
     
   }
   
-  private prepareEntity(entity: ProductUnit, dto: ProductUnitDto): Promise<ProductUnit> {
+  private prepareEntity(entity: DocumentType, dto: DocumentTypeDto): Promise<DocumentType> {
   
     try {
       const company = new Company();
@@ -223,28 +223,28 @@ export class ProductUnitService {
     
   }
 
-  private save(entity: ProductUnit): Promise<ProductUnit> {
+  private save(entity: DocumentType): Promise<DocumentType> {
     const start = performance.now();
 
-    const newEntity: ProductUnit = this.productUnitRepository.create(entity);
+    const newEntity: DocumentType = this.documentTypeRepository.create(entity);
 
-    return this.productUnitRepository.save(newEntity)
-    .then( (entity: ProductUnit) => {
+    return this.documentTypeRepository.save(newEntity)
+    .then( (entity: DocumentType) => {
       const end = performance.now();
       this.logger.log(`save: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
       return entity;
     })
   }
 
-  private replicationData(dto: ProductUnitDto): Promise<string> {
-    const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.PRODUCT_UNIT_UPDATE, JSON.stringify([dto]));
+  private replicationData(dto: DocumentTypeDto): Promise<string> {
+    const messageDto = new MessageDto(SourceEnum.API_ADMIN, ProcessEnum.DOCUMENT_TYPE_UPDATE, JSON.stringify([dto]));
     return this.replicationService.sendMessage(messageDto);
   }
 
-  private searchEntitiesByValues(companyId: string, paginationDto: SearchPaginationDto, inputDto: ProductUnitSearchInputDto): Promise<ProductUnit[]> {
+  private searchEntitiesByValues(companyId: string, paginationDto: SearchPaginationDto, inputDto: DocumentTypeSearchInputDto): Promise<DocumentType[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
-    const query = this.productUnitRepository.createQueryBuilder('a')
+    const query = this.documentTypeRepository.createQueryBuilder('a')
     .leftJoinAndSelect('a.company', 'c')
     .where('a.companyId = :companyId', { companyId })
     .andWhere('a.active = :active', { active: true });
