@@ -1,11 +1,11 @@
 -- init db
 CREATE DATABASE IF NOT EXISTS siproad_admin_db;
 
-CREATE USER 'siproad_user'@'%' IDENTIFIED BY 'siproad123.';
+-- CREATE USER 'siproad_user'@'%' IDENTIFIED BY 'siproad123.';
 
-GRANT ALL PRIVILEGES ON siproad_admin_db.* TO 'siproad_user'@'%';
+-- GRANT ALL PRIVILEGES ON siproad_admin_db.* TO 'siproad_user'@'%';
 
-FLUSH PRIVILEGES;
+-- FLUSH PRIVILEGES;
 
 -- create tables
 USE siproad_admin_db;
@@ -145,6 +145,9 @@ INSERT INTO `adm_role_permission` (`id`,`roleId`,`permissionId`) VALUES (1,'5f5d
 
 INSERT INTO `adm_setting_document_type` (`id`,`name`,`active`,`companyId`) VALUES ('120ed3cb-85e5-40f6-a90e-c29e13922f1f','FACTURA',1,'7ffbc5ea-9ecd-4531-bc25-b6bd8dfabbeb');
 INSERT INTO `adm_setting_document_type` (`id`,`name`,`active`,`companyId`) VALUES ('4f178ad3-cc91-4737-a409-f9c24bde9e68','BOLETA',1,'7ffbc5ea-9ecd-4531-bc25-b6bd8dfabbeb');
+
+INSERT INTO `adm_setting_product_unit` (`id`,`name`,`active`,`companyId`) VALUES ('01c13a4f-44e5-45b1-a80e-39f224b93d87','KG',1,'7ffbc5ea-9ecd-4531-bc25-b6bd8dfabbeb');
+INSERT INTO `adm_setting_product_unit` (`id`,`name`,`active`,`companyId`) VALUES ('125838ac-852c-45b0-ae3c-7fa93757a40c','UN',1,'7ffbc5ea-9ecd-4531-bc25-b6bd8dfabbeb');
 
 INSERT INTO `adm_user` (`id`,`name`,`email`,`password`,`status`,`createdAt`,`updatedAt`,`active`,`companyId`) VALUES ('0b98ed5d-48fb-4fd1-8bcb-8e8630962ea0','PROFAXNO','PROFAXNO@HOTMAIL.COM','$2b$10$DnG26ciIscG/uS6iyUbk8.iO7SS8OgDxrsDAYQZ00tYrQTRKUNVEu',1,'2025-04-03 01:11:17','2025-04-18 16:55:28',1,'7ffbc5ea-9ecd-4531-bc25-b6bd8dfabbeb');
 

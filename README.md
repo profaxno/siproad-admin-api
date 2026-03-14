@@ -20,6 +20,7 @@ Api del sistema siproad que permite gestionar compañias, usuarios, roles y perm
 * Configurar los valores de las variables de entornos correspondientes ```.env```
 * Actualizar node_modules ```npm install```
 * Instalar Docker Desktop.
+  * Actualizar base linux en windows ```wsl --update``` (Solo si docker lo solicita)
   * Limitar memoria del wsl utilizado por docker
   * Abrir archivo wsl ```notepad %USERPROFILE%\.wslconfig```
   * Copiar dentro del archivo wslconfig el siguiente contenido:

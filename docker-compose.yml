@@ -1,23 +1,31 @@
 version: '3'
 
 services:
-  # siproad_db:
-  #   image: mariadb:10.11
-  #   container_name: ${DOCKER_DB_CONTAINER_NAME}
-  #   restart: always
-  #   environment:
-  #     MYSQL_DATABASE: ${DB_NAME}
-  #     MYSQL_USER: ${DB_USERNAME}
-  #     MYSQL_PASSWORD: ${DB_PASSWORD}
-  #     MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-  #   ports:
-  #     - "${DOCKER_DB_PORT}:3306"
-  #   volumes:
-  #     - ./${DOCKER_DB_VOLUMEN}:/var/lib/mysql
-  #     - ./init-db:/docker-entrypoint-initdb.d
+  siproad_db:
+    image: mariadb:10.11
+    container_name: ${DOCKER_DB_CONTAINER_NAME}
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - "${DOCKER_DB_PORT}:3306"
+    volumes:
+      - ./${DOCKER_DB_VOLUMEN}:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+  siproad_redis:
+    image: redis:7
+    container_name: ${DOCKER_REDIS_CONTAINER_NAME}
+    ports:
+      - "${DOCKER_REDIS_PORT}:6379"
+    volumes:
+      - ./${DOCKER_REDIS_VOLUMEN}:/data
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "siproad123."]
   siproad-admin-api:
-    # depends_on:
-    #   - siproad_db
+    depends_on:
+      - siproad_db
     build: 
       context: .
       dockerfile: Dockerfile
@@ -26,6 +34,5 @@ services:
     restart: always
     ports:
       - "${PORT}:${PORT}"
-    # working_dir: /var/www/pokedex
     env_file:
       - .env
