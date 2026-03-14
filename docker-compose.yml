@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  # siproad-db:
+  # siproad_db:
   #   image: mariadb:10.11
   #   container_name: ${DOCKER_DB_CONTAINER_NAME}
   #   restart: always
@@ -14,9 +14,10 @@ services:
   #     - "${DOCKER_DB_PORT}:3306"
   #   volumes:
   #     - ./${DOCKER_DB_VOLUMEN}:/var/lib/mysql
+  #     - ./init-db:/docker-entrypoint-initdb.d
   siproad-admin-api:
     # depends_on:
-    #   - siproad-db
+    #   - siproad_db
     build: 
       context: .
       dockerfile: Dockerfile
